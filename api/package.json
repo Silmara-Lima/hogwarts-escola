@@ -1,0 +1,56 @@
+{
+  "name": "api-escola-hogwarts",
+  "version": "1.0.0",
+  "description": "API REST para Escola Hogwarts com Node.js, TypeScript, Prisma e PostgreSQL",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prisma:generate": "dotenv -c -- npx prisma generate --schema ./prisma/schema.prisma",
+    "prisma:migrate": "dotenv -c -- npx prisma migrate dev --schema ./prisma/schema.prisma",
+    "prisma:studio": "npx prisma studio",
+    "seed": "ts-node src/seed.ts",
+    "setup": "npm install && npm run prisma:generate && npm run prisma:migrate"
+  },
+  "keywords": [
+    "nodejs",
+    "typescript",
+    "prisma",
+    "postgresql",
+    "express",
+    "zod",
+    "hogwarts",
+    "api"
+  ],
+  "author": "Silmara Lima",
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/dotenv": "^6.1.1",
+    "@types/express": "^5.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.10.1",
+    "@types/swagger-ui-express": "^4.1.8",
+    "dotenv-cli": "^11.0.0",
+    "prisma": "^6.19.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

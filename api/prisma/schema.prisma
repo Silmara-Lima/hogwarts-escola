@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+// --- SECRETARIO ---
+model Secretario {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  senha     String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- TURMA/SERIE ---
+model Turma {
+  id        Int      @id @default(autoincrement())
+  serie     String   
+  turno     String   
+  
+  // Relação 1-para-N: Uma Turma tem muitos Alunos
+  alunos    Aluno[]
+  
+  // Relação N:M: Turma com Disciplinas (via TurmaDisciplina)
+  disciplinas TurmaDisciplina[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- RECURSO 1: CASA ---
+model Casa {
+  id        Int      @id @default(autoincrement())
+  nome      String   @unique
+  mascote   String?
+  fundador  String?
+  
+  // Relação 1-para-N: Uma Casa tem muitos Alunos
+  alunos    Aluno[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- RECURSO 2: PROFESSOR ---
+model Professor {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  cpf       String   @unique
+  senha     String
+  
+  // Relação N:M: Professor com Disciplinas e Turmas (via TurmaDisciplina)
+  turmasDisciplinas TurmaDisciplina[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- RECURSO 3: DISCIPLINA ---
+model Disciplina {
+  id        Int      @id @default(autoincrement())
+  nome      String   @unique
+  
+  // Relação N:M: Disciplina com Professor e Turma (via TurmaDisciplina)
+  turmasDisciplinas TurmaDisciplina[]
+  
+  // Relação N:M: Disciplina com Alunos (via Matricula)
+  matriculas Matricula[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// TABELA INTERMEDIÁRIA PARA RELACIONAR PROFESSOR, DISCIPLINA E TURMA ---
+// Um professor ministra uma Disciplina em uma Turma (e Turno) específica.
+model TurmaDisciplina {
+  id            Int         @id @default(autoincrement())
+  
+  professorId   Int
+  professor     Professor   @relation(fields: [professorId], references: [id])
+  
+  disciplinaId  Int
+  disciplina    Disciplina  @relation(fields: [disciplinaId], references: [id])
+  
+  turmaId       Int
+  turma         Turma       @relation(fields: [turmaId], references: [id])
+  
+  @@unique([professorId, disciplinaId, turmaId])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- RECURSO 4: ALUNO ---
+model Aluno {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  cpf       String   @unique
+  senha     String
+  
+  // Chave estrangeira para Casa (parte do tema Hogwarts)
+  casaId    Int?      
+  casa      Casa?     @relation(fields: [casaId], references: [id])
+  
+  // Chave estrangeira para Turma (Série e Turno)
+  turmaId   Int?
+  turma     Turma?    @relation(fields: [turmaId], references: [id])
+  
+  // Relação N:M: Aluno com Disciplinas (via Matricula)
+  matriculas Matricula[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Tabela intermediária N:M (Aluno -> Disciplina)
+// Associa o Aluno à Disciplina e pode conter dados de nota
+model Matricula {
+  id            Int       @id @default(autoincrement())
+  grade         Decimal?  @db.Decimal(3, 1) // Nota final ou parcial
+  
+  alunoId       Int
+  aluno         Aluno     @relation(fields: [alunoId], references: [id])
+
+  disciplinaId  Int
+  disciplina    Disciplina @relation(fields: [disciplinaId], references: [id])
+
+  @@unique([alunoId, disciplinaId])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
