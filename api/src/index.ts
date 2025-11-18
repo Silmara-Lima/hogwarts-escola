@@ -4,7 +4,8 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config"; // Garante que as variáveis de ambiente sejam carregadas
 import routes from "./routes/index";
-import { setupSwagger } from "./swagger"; // Se você estiver usando um arquivo swagger.ts/js
+import swaggerUi from "swagger-ui-express";
+import swaggerDocument from "./swagger"; // export default deve ser o Document do Swagger
 
 // Garante que o Prisma Client seja inicializado (embora ele seja lazy loaded)
 import "./database/prisma";
@@ -24,18 +25,18 @@ app.use(
 
 // Permite que o Express leia JSON no corpo das requisições
 app.use(express.json());
-
 // --- Rotas e Documentação ---
 
-// Configura a documentação Swagger (assumindo que você criará setupSwagger e um arquivo swagger.ts)
-setupSwagger(app);
+// Configura a documentação Swagger (servindo Swagger UI em /api-docs)
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Adiciona todas as rotas da aplicação
+app.use("/api", routes); // Opcional: Prefixar as rotas com '/api' para organização. Se não quiser, use app.use(routes);
 app.use("/api", routes); // Opcional: Prefixar as rotas com '/api' para organização. Se não quiser, use app.use(routes);
 
 // --- Inicialização do Servidor ---
 
-const PORT = process.env.PORT || 3333; // Usando 3333 é comum em Node.js
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`✨ Server de Hogwarts rodando em http://localhost:${PORT}`);
