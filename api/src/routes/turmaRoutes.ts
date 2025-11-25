@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { authenticate, authorize } from "../middlewares/authMiddleware";
+import {
+  authenticate,
+  authorize,
+  UserRole,
+} from "../middlewares/authMiddleware";
 import * as turmaController from "../controllers/TurmaController";
 
 const router = Router();
@@ -7,8 +11,8 @@ const router = Router();
 // =========================================================================
 // ROTAS DE TURMAS
 // =========================================================================
-const GESTAO_TURMA: any = ["SECRETARIO"];
-const CONSULTA_TURMA: any = ["SECRETARIO", "PROFESSOR"];
+const GESTAO_TURMA: UserRole[] = ["SECRETARIO"];
+const CONSULTA_TURMA: UserRole[] = ["SECRETARIO", "PROFESSOR"];
 
 router.post(
   "/",

@@ -3,7 +3,11 @@
 // =========================================================================
 
 import { Router } from "express";
-import { authenticate, authorize } from "../middlewares/authMiddleware";
+import {
+  authenticate,
+  authorize,
+  UserRole,
+} from "../middlewares/authMiddleware";
 import * as matriculaController from "../controllers/MatriculaController";
 
 const router = Router();
@@ -11,9 +15,9 @@ const router = Router();
 // =========================================================================
 // PERMISSÕES
 // =========================================================================
-const GESTAO_MATRICULA: string[] = ["SECRETARIO"];
-const CONSULTA_MATRICULA: string[] = ["SECRETARIO", "PROFESSOR"];
-const CONSULTA_ALUNO: string[] = ["SECRETARIO", "ALUNO"];
+const GESTAO_MATRICULA: UserRole[] = ["SECRETARIO"];
+const CONSULTA_MATRICULA: UserRole[] = ["SECRETARIO", "PROFESSOR"];
+const CONSULTA_ALUNO: UserRole[] = ["SECRETARIO", "ALUNO"];
 
 // =========================================================================
 // ROTAS CRUD

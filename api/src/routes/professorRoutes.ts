@@ -3,7 +3,11 @@
 // =========================================================================
 
 import { Router } from "express";
-import { authenticate, authorize } from "../middlewares/authMiddleware";
+import {
+  authenticate,
+  authorize,
+  UserRole,
+} from "../middlewares/authMiddleware";
 import * as professorController from "../controllers/ProfessorController";
 
 const router = Router();
@@ -11,8 +15,8 @@ const router = Router();
 // =========================================================================
 // PERMISSÕES
 // =========================================================================
-const GESTAO_PROFESSOR: string[] = ["SECRETARIO"];
-const CONSULTA_PROFESSOR: string[] = ["SECRETARIO", "PROFESSOR"];
+const GESTAO_PROFESSOR: UserRole[] = ["SECRETARIO"];
+const CONSULTA_PROFESSOR: UserRole[] = ["SECRETARIO", "PROFESSOR"];
 
 // =========================================================================
 // ROTAS ESPECÍFICAS

@@ -3,7 +3,11 @@
 // =========================================================================
 
 import { Router } from "express";
-import { authenticate, authorize } from "../middlewares/authMiddleware";
+import {
+  authenticate,
+  authorize,
+  UserRole,
+} from "../middlewares/authMiddleware";
 import * as disciplinaController from "../controllers/DisciplinaController";
 
 const router = Router();
@@ -11,8 +15,8 @@ const router = Router();
 // =========================================================================
 // PERMISSÕES
 // =========================================================================
-const GESTAO_DISCIPLINA: string[] = ["SECRETARIO"];
-const CONSULTA_DISCIPLINA: string[] = ["SECRETARIO", "PROFESSOR", "ALUNO"];
+const GESTAO_DISCIPLINA: UserRole[] = ["SECRETARIO"];
+const CONSULTA_DISCIPLINA: UserRole[] = ["SECRETARIO", "PROFESSOR", "ALUNO"];
 
 // =========================================================================
 // ROTAS CRUD

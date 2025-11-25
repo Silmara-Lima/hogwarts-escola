@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { authenticate, authorize } from "../middlewares/authMiddleware";
+import {
+  authenticate,
+  authorize,
+  UserRole,
+} from "../middlewares/authMiddleware";
 import * as secretarioController from "../controllers/SecretarioController";
 import alunoRoutes from "./alunoRoutes";
 
@@ -8,7 +12,7 @@ const router = Router();
 // =========================================================================
 // ROTAS DO SECRETÁRIO
 // =========================================================================
-const SECRETARIO: any = ["SECRETARIO"];
+const SECRETARIO: UserRole[] = ["SECRETARIO"];
 
 // Dashboard
 router.get(

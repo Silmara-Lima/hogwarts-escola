@@ -3,20 +3,18 @@
 // =========================================================================
 
 import { Request, Response } from "express";
+import { JwtPayload } from "jsonwebtoken";
 import * as professorService from "../services/ProfessorService";
 import { ZodError } from "zod";
 
 // =========================================================================
 // TIPAGEM DE REQUISIÇÃO (Autenticada)
 // =========================================================================
-interface AuthRequest extends Request {
-  user?: {
-    id: number;
-    email?: string;
-    role: string;
-  };
+export interface UserTokenData {
+  id: number;
+  email?: string;
+  role: string;
 }
-
 // =========================================================================
 // createProfessor (POST /professores)
 // =========================================================================
@@ -224,7 +222,7 @@ export const getAlunosByProfessor = async (req: Request, res: Response) => {
 // =========================================================================
 // getMeDetails (GET /professor/me)
 // =========================================================================
-export const getMeDetails = async (req: AuthRequest, res: Response) => {
+export const getMeDetails = async (req: Request, res: Response) => {
   const userEmail = req.user?.email;
 
   if (!userEmail) {
@@ -235,7 +233,7 @@ export const getMeDetails = async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const details = await professorService.getMeDetailsByEmail(userEmail);
+    const details = await professorService.getMeDetails(userEmail);
     return res.json(details);
   } catch (error: any) {
     if (error.message.includes("não encontrado")) {

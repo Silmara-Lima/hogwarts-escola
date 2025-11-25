@@ -9,7 +9,7 @@ import * as jwt from "jsonwebtoken";
 export type UserRole = "ALUNO" | "PROFESSOR" | "SECRETARIO";
 
 // Definição de tipos para o objeto de usuário anexado ao Request
-interface JwtPayload {
+interface DecodedToken {
   id: number;
   email: string;
   role: UserRole;
@@ -20,7 +20,7 @@ interface JwtPayload {
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload;
+      user?: DecodedToken;
     }
   }
 }
@@ -52,7 +52,7 @@ export const authenticate = (
   }
 
   try {
-    const decoded = jwt.verify(token, secret) as JwtPayload;
+    const decoded = jwt.verify(token, secret) as DecodedToken;
     req.user = decoded;
     next();
   } catch (error: any) {

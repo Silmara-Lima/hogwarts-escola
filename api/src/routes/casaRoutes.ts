@@ -3,7 +3,11 @@
 // =========================================================================
 
 import { Router } from "express";
-import { authenticate, authorize } from "../middlewares/authMiddleware";
+import {
+  authenticate,
+  authorize,
+  UserRole,
+} from "../middlewares/authMiddleware";
 import * as casaController from "../controllers/CasaController";
 
 const router = Router();
@@ -12,9 +16,12 @@ const router = Router();
 // ROLES
 // =========================================================================
 // Apenas Secretário pode gerenciar Casas (CRUD)
-const GESTAO_CASA = ["SECRETARIO"];
+// CORREÇÃO: Tipando explicitamente para UserRole[]
+const GESTAO_CASA: UserRole[] = ["SECRETARIO"];
+
 // Todos podem consultar a lista de Casas (para relatórios ou alocação)
-const CONSULTA_CASA = ["SECRETARIO", "PROFESSOR", "ALUNO"];
+// CORREÇÃO: Tipando explicitamente para UserRole[]
+const CONSULTA_CASA: UserRole[] = ["SECRETARIO", "PROFESSOR", "ALUNO"];
 
 // =========================================================================
 // ROTAS CRUD

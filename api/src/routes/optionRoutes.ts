@@ -4,7 +4,11 @@
 
 import { Router } from "express";
 import { getOptions } from "../controllers/OptionController";
-import { authenticate, authorize } from "../middlewares/authMiddleware";
+import {
+  authenticate,
+  authorize,
+  UserRole,
+} from "../middlewares/authMiddleware";
 
 const router = Router();
 
@@ -13,7 +17,7 @@ const router = Router();
 router.get(
   "/",
   authenticate,
-  authorize(["PROFESSOR", "SECRETARIO"]), // Apenas professores e secretários podem acessar
+  authorize(["PROFESSOR", "SECRETARIO"] as UserRole[]), // Apenas professores e secretários podem acessar
   getOptions
 );
 
