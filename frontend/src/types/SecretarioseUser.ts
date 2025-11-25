@@ -1,9 +1,11 @@
-/** Papéis de usuário no sistema de gerenciamento. */
+// =========================================================================
+// 1. Papéis de usuário
+// =========================================================================
 export type UserRole = "SECRETARIO" | "PROFESSOR" | "ALUNO";
 
-/**
- * Dados básicos de um Secretário.
- */
+// =========================================================================
+// 2. Interfaces de usuários
+// =========================================================================
 export interface Secretario {
   id: number;
   nome: string;
@@ -11,23 +13,18 @@ export interface Secretario {
   telefone: string;
 }
 
-/**
- * Dados do usuário logado, incluindo o papel e detalhes específicos.
- */
 export interface UserData {
   id: number;
   nome: string;
   email: string;
   role: UserRole;
-
-  // Dados específicos para o Dashboard (opcional)
   casa?: string; // Nome da Casa (para Aluno)
   disciplinaPrincipal?: string; // Nome da Disciplina (para Professor)
 }
 
-/**
- * Retorno da API após login bem-sucedido.
- */
+// =========================================================================
+// 3. Resposta de login
+// =========================================================================
 export interface LoginResponse {
   token: string;
   user: UserData;

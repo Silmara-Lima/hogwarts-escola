@@ -1,30 +1,57 @@
+// =========================================================================
+// indexRoutes.ts - Centralizador de todas as rotas da API
+// =========================================================================
+
 import { Router } from "express";
 
-// Importa os roteadores de módulo
-import authRoutes from "./auth.routes";
-import secretarioRoutes from "./secretario.routes";
-import professorRoutes from "./professor.routes";
-import turmaRoutes from "./turma.routes";
-import disciplinaRoutes from "./disciplina.routes";
-import matriculaRoutes from "./matricula.routes";
-import casaRoutes from "./casa.routes";
+// Importações dos módulos de rotas
+import authRoutes from "./authRoutes";
+import optionRoutes from "./optionRoutes";
+import professorRoutes from "./professorRoutes";
+import secretarioRoutes from "./secretarioRoutes";
+import turmaRoutes from "./turmaRoutes";
+import disciplinaRoutes from "./disciplinaRoutes";
+import matriculaRoutes from "./matriculaRoutes";
+import casaRoutes from "./casaRoutes";
+
+// Importações adicionais para rota de perfil do Aluno
+import * as AlunoController from "../controllers/AlunoController";
+import { authenticate, authorize } from "../middlewares/authMiddleware";
 
 const router = Router();
 
-// Rota de Autenticação (acesso público)
-router.use("/", authRoutes);
+// =========================================================================
+// ROTAS DA API
+// =========================================================================
 
-// Rotas de Gestão de Usuário e Secretário
-router.use("/secretario", secretarioRoutes); // Rotas de criação (POST /secretario/alunos)
+// 1. Rota de Autenticação (pública)
+// Endpoint: /api/auth/...
+router.use("/auth", authRoutes);
 
-// Rotas do Módulo Acadêmico
-router.use("/turmas", turmaRoutes);
-router.use("/disciplinas", disciplinaRoutes);
-router.use("/matriculas", matriculaRoutes);
-router.use("/casas", casaRoutes);
+// 2. Rotas do módulo de Pessoas e Gestão
+// Endpoint: /api/secretario/... (alunos, professores, dashboard)
+router.use("/secretario", secretarioRoutes);
 
-// Rotas do Módulo de Pessoas e Perfil
+// Endpoint: /api/professores/... (CRUD de Professores)
 router.use("/professores", professorRoutes);
-// **NOTA:** As rotas CRUD de Aluno e Secretário (exceto criação) deveriam ir aqui (ex: /alunos/1, /secretarios/1)
+
+// Rota específica para obter informações do Aluno logado
+// Endpoint: /api/aluno/info
+router.get(
+  "/aluno/info",
+  authenticate,
+  authorize(["ALUNO"]),
+  AlunoController.getAlunoInfo
+);
+
+// 3. Rotas do módulo acadêmico e institucional
+router.use("/turmas", turmaRoutes); // /api/turmas/...
+router.use("/disciplinas", disciplinaRoutes); // /api/disciplinas/...
+router.use("/matriculas", matriculaRoutes); // /api/matriculas/...
+router.use("/casas", casaRoutes); // /api/casas/...
+
+// 4. Rotas de utilitário/metadados
+// Endpoint: /api/options/...
+router.use("/options", optionRoutes);
 
 export default router;

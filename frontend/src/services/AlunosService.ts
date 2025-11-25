@@ -1,82 +1,118 @@
-import { api } from "../apiCore/apiCore"; // Importa a instância configurada do Axios
+import api from "./api"; // Instância do Axios configurada com interceptor JWT
+import type {
+  AlunoDetalhe,
+  AlunoDetalheAPI,
+  CreateAlunoData,
+  UpdateAlunoData,
+  DisciplinaFrontEnd,
+} from "../types/Alunos";
+import type { Casa, Turma } from "../types/CasaeTurma";
 
-// --- Tipos de Aluno (Definidos aqui para evitar erros de importação de arquivo separado) ---
-export interface Aluno {
+// =========================================================
+// AlunoListaBackend
+// Representa o objeto bruto (raw) que vem do backend
+// =========================================================
+export interface AlunoListaBackend {
   id: number;
   nome: string;
-  casaId: number;
-  casaNome: string;
-  ano: number;
+  email: string;
+  cpf: string;
+  telefone: string;
+  dataNascimento: string;
+  matricula: string;
+  turno: string;
+  turma: {
+    id: number;
+    serie: string;
+    turno: string;
+    curso?: { nome: string };
+  };
+  casa: {
+    id: number;
+    nome: string;
+  };
+  createdAt: string;
+  updatedAt: string;
 }
-export interface CreateAlunoDTO {
-  nome: string;
-  casaId: number;
-  ano: number;
-}
-export interface UpdateAlunoDTO {
-  nome?: string;
-  casaId?: number;
-  ano?: number;
-}
-// ---------------------------------------------------------------------------------------
 
-const ENDPOINT = "/alunos";
+const BASE_URL = "/secretario/alunos";
 
-/**
- * Busca todos os alunos cadastrados.
- * @returns Promise<Aluno[]> Lista de alunos.
- */
-export const getAlunos = async (): Promise<Aluno[]> => {
-  // GET http://localhost:3000/api/alunos
-  const response = await api.get<Aluno[]>(ENDPOINT);
+// =========================================================
+// FUNÇÃO PRINCIPAL PARA O ALUNO LOGADO
+// =========================================================
+export const getAlunoDetalheMe = async (): Promise<AlunoDetalhe> => {
+  const response = await api.get("/aluno/info");
+  const dataBruta: AlunoDetalheAPI = response.data;
+
+  const disciplinasMapeadas: DisciplinaFrontEnd[] = dataBruta.matriculas.map(
+    (m) => ({
+      id: m.disciplina.id,
+      nome: m.disciplina.nome,
+      professor: m.disciplina.professor || "Professor(a) não informado(a)",
+      horario: m.disciplina.horario || "Horário não informado",
+    })
+  );
+
+  const alunoDetalhe: AlunoDetalhe = {
+    id: dataBruta.id,
+    nome: dataBruta.nome,
+    email: dataBruta.email,
+    cpf: dataBruta.cpf,
+    telefone: dataBruta.telefone,
+    dataNascimento: dataBruta.dataNascimento,
+    matricula: dataBruta.matricula,
+    curso: dataBruta.turma.curso?.nome || "Não Informado",
+    turno: dataBruta.turma.turno || "Não Informado",
+    nomeCasa: dataBruta.casa.nome,
+    disciplinas: disciplinasMapeadas,
+  };
+
+  return alunoDetalhe;
+};
+
+// =========================================================
+// FUNÇÕES CRUD DE ALUNOS
+// =========================================================
+export const getAlunos = async (): Promise<AlunoListaBackend[]> => {
+  const response = await api.get(BASE_URL, {
+    params: { include: "casa,turma" },
+  });
   return response.data;
 };
 
-/**
- * Busca um aluno específico pelo ID.
- * @param id ID do aluno.
- * @returns Promise<Aluno> O aluno encontrado.
- */
-export const getAlunoById = async (id: number): Promise<Aluno> => {
-  // GET http://localhost:3000/api/alunos/:id
-  const response = await api.get<Aluno>(`${ENDPOINT}/${id}`);
+export const getAlunoById = async (id: number): Promise<AlunoListaBackend> => {
+  const response = await api.get(`${BASE_URL}/${id}`);
   return response.data;
 };
 
-/**
- * Cria um novo aluno.
- * @param alunoData Dados para criação do aluno (sem o ID).
- * @returns Promise<Aluno> O aluno criado, incluindo seu novo ID.
- */
 export const createAluno = async (
-  alunoData: CreateAlunoDTO
-): Promise<Aluno> => {
-  // POST http://localhost:3000/api/alunos
-  const response = await api.post<Aluno>(ENDPOINT, alunoData);
+  data: CreateAlunoData
+): Promise<AlunoListaBackend> => {
+  const response = await api.post(BASE_URL, data);
   return response.data;
 };
 
-/**
- * Atualiza um aluno existente.
- * @param id ID do aluno a ser atualizado.
- * @param alunoData Dados parciais para atualização.
- * @returns Promise<Aluno> O aluno atualizado.
- */
 export const updateAluno = async (
   id: number,
-  alunoData: UpdateAlunoDTO
-): Promise<Aluno> => {
-  // PUT http://localhost:3000/api/alunos/:id
-  const response = await api.put<Aluno>(`${ENDPOINT}/${id}`, alunoData);
+  data: UpdateAlunoData
+): Promise<AlunoListaBackend> => {
+  const response = await api.patch(`${BASE_URL}/${id}`, data);
   return response.data;
 };
 
-/**
- * Deleta um aluno pelo ID.
- * @param id ID do aluno a ser deletado.
- * @returns Promise<void>
- */
 export const deleteAluno = async (id: number): Promise<void> => {
-  // DELETE http://localhost:3000/api/alunos/:id
-  await api.delete(`${ENDPOINT}/${id}`);
+  await api.delete(`${BASE_URL}/${id}`);
+};
+
+// =========================================================
+// FUNÇÕES AUXILIARES
+// =========================================================
+export const getCasas = async (): Promise<Casa[]> => {
+  const response = await api.get("/casas");
+  return response.data;
+};
+
+export const getTurmas = async (): Promise<Turma[]> => {
+  const response = await api.get("/turmas");
+  return response.data;
 };

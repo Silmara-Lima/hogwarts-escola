@@ -1,27 +1,25 @@
-// src/controllers/CasaController.ts
+// =========================================================================
+// CasaController
+// =========================================================================
 
 import { Request, Response } from "express";
 import * as casaService from "../services/CasaService";
-import { ZodError } from "zod"; // Para validação, se aplicável
+import { ZodError } from "zod";
 
-/**
- * Cria uma nova Casa. Geralmente restrito ao Secretário ou usado apenas no Seed.
- */
+// =========================================================================
+// createCasa (POST /casas)
+// =========================================================================
 export const createCasa = async (req: Request, res: Response) => {
   try {
-    // [OPCIONAL] Adicionar validação Zod aqui.
-
     const casa = await casaService.create(req.body);
     return res.status(201).json(casa);
   } catch (error: any) {
     if (error instanceof ZodError) {
-      const zodError = error as ZodError<any>;
       return res.status(400).json({
         message: "Erro de validação de dados.",
-        errors: zodError.issues,
+        errors: error.issues,
       });
     }
-    // P2002: Campo único (se o nome da casa for único) já existe
     if (error.code === "P2002") {
       return res
         .status(409)
@@ -31,9 +29,9 @@ export const createCasa = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Retorna todas as Casas, incluindo a contagem de alunos e detalhes.
- */
+// =========================================================================
+// getAllCasas (GET /casas)
+// =========================================================================
 export const getAllCasas = async (req: Request, res: Response) => {
   try {
     const casas = await casaService.getAll();
@@ -43,36 +41,32 @@ export const getAllCasas = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Retorna uma Casa pelo ID, incluindo todos os alunos associados.
- */
+// =========================================================================
+// getCasaById (GET /casas/:id)
+// =========================================================================
 export const getCasaById = async (req: Request, res: Response) => {
   try {
     const casa = await casaService.getById(Number(req.params.id));
-
     if (!casa) {
       return res.status(404).json({ message: "Casa não encontrada." });
     }
-
     return res.json(casa);
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
   }
 };
 
-/**
- * Atualiza os dados de uma Casa.
- */
+// =========================================================================
+// updateCasa (PATCH /casas/:id)
+// =========================================================================
 export const updateCasa = async (req: Request, res: Response) => {
   try {
     const casa = await casaService.update(Number(req.params.id), req.body);
     return res.json(casa);
   } catch (error: any) {
-    // P2025: Registro não encontrado para atualização
     if (error.code === "P2025") {
       return res.status(404).json({ message: "Casa não encontrada." });
     }
-    // P2002: Campo único já existe
     if (error.code === "P2002") {
       return res
         .status(409)
@@ -82,19 +76,17 @@ export const updateCasa = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Remove uma Casa.
- */
+// =========================================================================
+// deleteCasa (DELETE /casas/:id)
+// =========================================================================
 export const deleteCasa = async (req: Request, res: Response) => {
   try {
     await casaService.remove(Number(req.params.id));
-    return res.status(204).send(); // HTTP 204: Sucesso, sem conteúdo
+    return res.status(204).send();
   } catch (error: any) {
-    // P2025: Registro não encontrado para deleção
     if (error.code === "P2025") {
       return res.status(404).json({ message: "Casa não encontrada." });
     }
-    // P2003: Falha na restrição de chave estrangeira (a casa tem alunos vinculados)
     if (error.code === "P2003") {
       return res.status(409).json({
         message:

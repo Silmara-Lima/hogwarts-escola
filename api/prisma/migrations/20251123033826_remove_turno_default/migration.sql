@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Aluno" ALTER COLUMN "turno" DROP DEFAULT;

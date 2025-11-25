@@ -1,64 +1,99 @@
-import { api } from "../apiCore/apiCore";
+// ======================================================
+// Professor Service
+// ======================================================
+import api from "./api";
+import type {
+  PublicProfessor,
+  ProfessorCreateData,
+  ProfessorUpdateData,
+  ProfessorDetalhe,
+  AlunoDetalheProfessor,
+  DisciplinaTurmaVinculo,
+} from "../types/Professor";
 
-// --- Tipos de Professor (Definidos aqui para evitar erros de importação de arquivo separado) ---
-export interface Professor {
-  id: number;
-  nome: string;
-  disciplinaId: number;
-  disciplinaNome: string;
+const BASE_URL = "/professores";
+
+// ======================================================
+// LISTAR TODOS
+// ======================================================
+export async function getProfessores(): Promise<PublicProfessor[]> {
+  const res = await api.get(BASE_URL);
+  return res.data;
 }
-export interface CreateProfessorDTO {
-  nome: string;
-  disciplinaId: number;
+
+// ======================================================
+// CREATE
+// ======================================================
+export async function createProfessor(
+  data: ProfessorCreateData
+): Promise<PublicProfessor> {
+  const res = await api.post(BASE_URL, data);
+  return res.data;
 }
-export interface UpdateProfessorDTO {
-  nome?: string;
-  disciplinaId?: number;
+
+// ======================================================
+// GET BY ID
+// ======================================================
+export async function getProfessorById(id: number): Promise<PublicProfessor> {
+  const res = await api.get(`${BASE_URL}/${id}`);
+  return res.data;
 }
-// ---------------------------------------------------------------------------------------
 
-const ENDPOINT = "/professores";
-
-/**
- * Busca todos os professores cadastrados.
- * @returns Promise<Professor[]> Lista de professores.
- */
-export const getProfessores = async (): Promise<Professor[]> => {
-  const response = await api.get<Professor[]>(ENDPOINT);
-  return response.data;
-};
-
-/**
- * Cria um novo professor.
- * @param professorData Dados para criação do professor.
- * @returns Promise<Professor> O professor criado.
- */
-export const createProfessor = async (
-  professorData: CreateProfessorDTO
-): Promise<Professor> => {
-  const response = await api.post<Professor>(ENDPOINT, professorData);
-  return response.data;
-};
-
-/**
- * Atualiza um professor existente.
- * @param id ID do professor a ser atualizado.
- * @param professorData Dados parciais para atualização.
- * @returns Promise<Professor> O professor atualizado.
- */
-export const updateProfessor = async (
+// ======================================================
+// UPDATE
+// ======================================================
+export async function updateProfessor(
   id: number,
-  professorData: UpdateProfessorDTO
-): Promise<Professor> => {
-  const response = await api.put<Professor>(`${ENDPOINT}/${id}`, professorData);
-  return response.data;
-};
+  data: ProfessorUpdateData
+): Promise<PublicProfessor> {
+  const res = await api.put(`${BASE_URL}/${id}`, data);
+  return res.data;
+}
 
-/**
- * Deleta um professor pelo ID.
- * @param id ID do professor a ser deletado.
- * @returns Promise<void>
- */
-export const deleteProfessor = async (id: number): Promise<void> => {
-  await api.delete(`${ENDPOINT}/${id}`);
-};
+// ======================================================
+// DELETE
+// ======================================================
+export async function deleteProfessor(id: number): Promise<void> {
+  await api.delete(`${BASE_URL}/${id}`);
+}
+
+// ======================================================
+// DETALHES COMPLETOS
+// ======================================================
+export async function getProfessorDetails(
+  id: number
+): Promise<ProfessorDetalhe> {
+  const res = await api.get(`${BASE_URL}/${id}/details`);
+  return res.data;
+}
+
+// ======================================================
+// ALUNOS LECIONADOS
+// ======================================================
+export async function getProfessorAlunos(
+  id: number
+): Promise<AlunoDetalheProfessor[]> {
+  const res = await api.get(`${BASE_URL}/${id}/alunos`);
+  return res.data;
+}
+
+// ======================================================
+// VINCULAR DISCIPLINAS + TURMAS
+// ======================================================
+export async function vincularDisciplinas(
+  professorId: number,
+  vinculos: DisciplinaTurmaVinculo[]
+): Promise<ProfessorDetalhe> {
+  const res = await api.patch(`${BASE_URL}/${professorId}/disciplinas`, {
+    vinculos,
+  });
+  return res.data;
+}
+
+// ======================================================
+// GET DO PROFESSOR LOGADO
+// ======================================================
+export async function getMeDetails(): Promise<ProfessorDetalhe> {
+  const res = await api.get(`${BASE_URL}/me/details`);
+  return res.data;
+}

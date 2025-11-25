@@ -1,24 +1,29 @@
+import * as dotenv from "dotenv";
+dotenv.config();
+
 import { prisma } from "../database/prisma";
 import * as bcrypt from "bcryptjs";
-import { Casa, Disciplina, Professor, Turma } from "@prisma/client";
+import { Casa, Disciplina, Turma, Professor, Aluno } from "@prisma/client";
 
 const SALT_ROUNDS = 10;
 const DEFAULT_PASSWORD = "password123";
 
-// --- DADOS INICIAIS ---
+// =========================================================================
+// 1. Dados Iniciais
+// =========================================================================
 
 const casasData = [
-  { nome: "Grifinória", diretor: "Minerva McGonagall", cor: "#7F0909" },
-  { nome: "Sonserina", diretor: "Severus Snape", cor: "#1A472A" },
-  { nome: "Lufa-Lufa", diretor: "Pomona Sprout", cor: "#FFD800" },
-  { nome: "Corvinal", diretor: "Filius Flitwick", cor: "#0E1A40" },
+  { nome: "Grifinória", diretor: "Minerva McGonagall", cor: "Vinho" },
+  { nome: "Sonserina", diretor: "Severus Snape", cor: "Verde" },
+  { nome: "Lufa-Lufa", diretor: "Pomona Sprout", cor: "Amarelo" },
+  { nome: "Corvinal", diretor: "Filius Flitwick", cor: "Azul escuro" },
 ];
 
 const turmasData = [
-  { serie: "1", turno: "MATUTINO" },
-  { serie: "2", turno: "MATUTINO" },
-  { serie: "3", turno: "VESPERTINO" },
-  { serie: "4", turno: "VESPERTINO" },
+  { serie: 1, turno: "MATUTINO" },
+  { serie: 2, turno: "MATUTINO" },
+  { serie: 3, turno: "VESPERTINO" },
+  { serie: 4, turno: "VESPERTINO" },
 ];
 
 const disciplinasData = [
@@ -40,24 +45,32 @@ const professoresData = [
     email: "snape@hogwarts.com",
     cpf: "11111111111",
     telefone: "11988887777",
+    departamento: "Poções",
+    matricula: "P001",
   },
   {
     nome: "Minerva McGonagall",
     email: "mcgonagall@hogwarts.com",
     cpf: "22222222222",
     telefone: "11988886666",
+    departamento: "Transfiguração",
+    matricula: "P002",
   },
   {
     nome: "Filius Flitwick",
     email: "flitwick@hogwarts.com",
     cpf: "33333333333",
     telefone: "11988885555",
+    departamento: "Feitiços",
+    matricula: "P003",
   },
   {
     nome: "Sibila Trelawney",
     email: "trelawney@hogwarts.com",
     cpf: "44444444444",
     telefone: "11988884444",
+    departamento: "Adivinhação",
+    matricula: "P004",
   },
 ];
 
@@ -99,16 +112,20 @@ const alunosData = [
   },
 ];
 
+// =========================================================================
+// 2. Seed Principal
+// =========================================================================
+
 async function seedAll() {
   console.log("==============================================");
   console.log("🌱 Iniciando o Seed de Dados de Hogwarts...");
   console.log("==============================================");
 
-  // --- 1. Hashing da Senha Padrão ---
   const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, SALT_ROUNDS);
-  console.log(`\n🔑 Senha padrão (hogwarts123) hashada.`);
 
-  // --- 2. Criar Casas (Chave Estrangeira Crucial) ---
+  // =========================================================================
+  // 2.1 Casas
+  // =========================================================================
   console.log("\n🏰 Criando Casas...");
   const casas: Casa[] = [];
   for (const casa of casasData) {
@@ -118,38 +135,34 @@ async function seedAll() {
       create: casa,
     });
     casas.push(result);
-    console.log(`  ✅ Casa ${casa.nome}`);
   }
-  const casaGrifinoriaId = casas.find((c) => c.nome === "Grifinória")?.id;
-  const casaSonserinaId = casas.find((c) => c.nome === "Sonserina")?.id;
-  const casaLufaLufaId = casas.find((c) => c.nome === "Lufa-Lufa")?.id;
-  const casaCorvinalId = casas.find((c) => c.nome === "Corvinal")?.id;
+  const getCasaId = (nome: string) => casas.find((c) => c.nome === nome)?.id;
 
-  // --- 3. Criar Turmas (Chave Estrangeira Crucial) ---
-  console.log("\n📚 Criando Turmas (Anos/Turnos)...");
+  // =========================================================================
+  // 2.2 Turmas
+  // =========================================================================
+  console.log("\n📚 Criando Turmas...");
   const turmas: Turma[] = [];
   for (const turma of turmasData) {
+    const serieString = String(turma.serie);
     const existing = await prisma.turma.findFirst({
-      where: { serie: String(turma.serie), turno: turma.turno },
+      where: { serie: serieString, turno: turma.turno },
     });
-
-    if (existing) {
-      turmas.push(existing);
-      console.log(
-        `  ✅ Turma ${turma.serie}º Ano (${turma.turno}) (já existente)`
+    if (existing) turmas.push(existing);
+    else
+      turmas.push(
+        await prisma.turma.create({
+          data: { serie: serieString, turno: turma.turno },
+        })
       );
-    } else {
-      const result = await prisma.turma.create({ data: turma });
-      turmas.push(result);
-      console.log(`  ✅ Turma ${turma.serie}º Ano (${turma.turno})`);
-    }
   }
-  const turma1AnoId = turmas.find((t) => Number(t.serie) === 1)?.id;
-  const turma2AnoId = turmas.find((t) => Number(t.serie) === 2)?.id;
-  const turma3AnoId = turmas.find((t) => Number(t.serie) === 3)?.id;
+  const getTurmaId = (serie: number | string) =>
+    turmas.find((t) => t.serie === String(serie))?.id;
 
-  // --- 4. Criar Disciplinas ---
-  console.log("\n📜 Criando Disciplinas (Matérias)...");
+  // =========================================================================
+  // 2.3 Disciplinas
+  // =========================================================================
+  console.log("\n📜 Criando Disciplinas...");
   const disciplinas: Disciplina[] = [];
   for (const disciplina of disciplinasData) {
     const result = await prisma.disciplina.upsert({
@@ -158,197 +171,153 @@ async function seedAll() {
       create: disciplina,
     });
     disciplinas.push(result);
-    console.log(`  ✅ Disciplina ${disciplina.nome}`);
   }
+  const getDisciplinaId = (nome: string) =>
+    disciplinas.find((d) => d.nome === nome)?.id;
 
-  // --- 5. Criar Secretário (Admin) ---
-  console.log("\n👤 Criando Secretário (Admin)...");
-  const secretarioData = {
-    nome: "Albus Dumbledore",
-    email: "diretor@hogwarts.com",
-    senha: hashedPassword,
-    telefone: "99999999999",
-  };
+  // =========================================================================
+  // 2.4 Secretário
+  // =========================================================================
+  console.log("\n👤 Criando Secretário...");
   await prisma.secretario.upsert({
-    where: { email: secretarioData.email },
+    where: { email: "diretor@hogwarts.com" },
     update: {},
-    create: secretarioData,
+    create: {
+      nome: "Albus Dumbledore",
+      email: "diretor@hogwarts.com",
+      senha: hashedPassword,
+    },
   });
-  console.log(
-    `  ✅ Secretário: ${secretarioData.email} (Senha: ${DEFAULT_PASSWORD})`
-  );
 
-  // --- 6. Criar Professores ---
+  // =========================================================================
+  // 2.5 Professores
+  // =========================================================================
   console.log("\n👨‍🏫 Criando Professores...");
-  const professores: Professor[] = [];
+  const professoresCriados: Professor[] = [];
   for (const prof of professoresData) {
-    // Atribui uma disciplina principal ao professor (para exemplificar)
-    let disciplinaPrincipalId: number | undefined;
-    if (prof.nome.includes("Snape"))
-      disciplinaPrincipalId = disciplinas.find((d) => d.nome === "Poções")?.id;
-    else if (prof.nome.includes("McGonagall"))
-      disciplinaPrincipalId = disciplinas.find(
-        (d) => d.nome === "Transfiguração"
-      )?.id;
-    else if (prof.nome.includes("Flitwick"))
-      disciplinaPrincipalId = disciplinas.find(
-        (d) => d.nome === "Feitiços"
-      )?.id;
-    else if (prof.nome.includes("Trelawney"))
-      disciplinaPrincipalId = disciplinas.find(
-        (d) => d.nome === "Adivinhação"
-      )?.id;
-
     const result = await prisma.professor.upsert({
       where: { email: prof.email },
-      update: {},
-      create: {
-        ...prof,
+      update: {
         senha: hashedPassword,
-        ...(disciplinaPrincipalId
-          ? { disciplinaPrincipal: { connect: { id: disciplinaPrincipalId } } }
-          : {}),
+        nome: prof.nome,
+        departamento: prof.departamento,
+        telefone: prof.telefone,
+        matricula: prof.matricula,
       },
+      create: { ...prof, senha: hashedPassword, matricula: prof.matricula },
     });
-    professores.push(result);
-    console.log(`  ✅ Professor ${prof.nome} (Senha: ${DEFAULT_PASSWORD})`);
+    professoresCriados.push(result);
   }
+  const getProfessorId = (nome: string) =>
+    professoresCriados.find((p) => p.nome === nome)?.id;
 
-  // --- 7. Criar Alunos ---
+  // =========================================================================
+  // 2.6 Alunos
+  // =========================================================================
   console.log("\n🧙‍♂️ Criando Alunos...");
-  const alunos = [];
+  const alunosCriados: Aluno[] = [];
   for (let i = 0; i < alunosData.length; i++) {
     const aluno = alunosData[i];
-
-    // Distribuição arbitrária
-    let casaId: number | undefined;
-    let turmaId: number | undefined;
-
-    if (i % 5 === 0) {
-      // Harry
-      casaId = casaGrifinoriaId;
-      turmaId = turma3AnoId;
-    } else if (i % 5 === 1) {
-      // Hermione
-      casaId = casaGrifinoriaId;
-      turmaId = turma3AnoId;
-    } else if (i % 5 === 2) {
-      // Draco
-      casaId = casaSonserinaId;
-      turmaId = turma3AnoId;
-    } else if (i % 5 === 3) {
-      // Luna
-      casaId = casaCorvinalId;
-      turmaId = turma1AnoId;
-    } else {
-      // Cedrico
-      casaId = casaLufaLufaId;
-      turmaId = turma2AnoId;
-    }
-
-    if (!casaId || !turmaId) {
-      console.error(`  ❌ Erro ao atribuir IDs para ${aluno.nome}. Pulando.`);
-      continue;
-    }
-
+    const casaId = getCasaId(
+      i % 5 === 0 || i % 5 === 1
+        ? "Grifinória"
+        : i % 5 === 2
+        ? "Sonserina"
+        : i % 5 === 3
+        ? "Corvinal"
+        : "Lufa-Lufa"
+    );
+    const turmaId = getTurmaId(i % 5 === 3 ? 1 : i % 5 === 4 ? 2 : 3);
+    if (!casaId || !turmaId) continue;
     const result = await prisma.aluno.upsert({
       where: { email: aluno.email },
       update: {},
-      create: {
-        ...aluno,
-        senha: hashedPassword,
-        casaId: casaId,
-        turmaId: turmaId,
-      },
-      include: {
-        casa: true,
-        turma: true,
-      },
+      create: { ...aluno, senha: hashedPassword, casaId, turmaId },
     });
-    alunos.push(result);
-    console.log(
-      `  ✅ Aluno ${aluno.nome} (${result.casa?.nome ?? "N/A"} - ${
-        result.turma?.serie ?? "N/A"
-      }º Ano)`
-    );
+    alunosCriados.push(result);
   }
 
-  // --- 8. Criar Matrículas de Exemplo ---
-  console.log("\n📝 Criando Matrículas de Exemplo...");
-  const matriculasCount = await seedMatriculas(alunos, disciplinas);
-  console.log(`  📊 Total de Matrículas criadas: ${matriculasCount}`);
+  // =========================================================================
+  // 2.7 TurmaDisciplina
+  // =========================================================================
+  console.log("\n🔗 Atribuindo Professores a Disciplinas/Turmas...");
+  const snapeId = getProfessorId("Severus Snape");
+  const mcgonagallId = getProfessorId("Minerva McGonagall");
+  const flitwickId = getProfessorId("Filius Flitwick");
+  const pocoesId = getDisciplinaId("Poções");
+  const transfiguracaoId = getDisciplinaId("Transfiguração");
+  const feiticosId = getDisciplinaId("Feitiços");
+  const turma1Id = getTurmaId(1);
+  const turma3Id = getTurmaId(3);
 
-  // --- 9. Resumo Final ---
-  console.log("\n==============================================");
-  console.log("🎉 SEED CONCLUÍDO COM SUCESSO!");
-  console.log("==============================================");
-  console.log(`- Usuários de Teste (Senha: ${DEFAULT_PASSWORD})`);
-  console.log(`  - Secretário: ${secretarioData.email}`);
-  console.log(`  - Professor: ${professoresData[0].email}`);
-  console.log(`  - Aluno: ${alunosData[0].email}`);
-  console.log("==============================================");
-}
+  const atribuicoes = [
+    { professorId: snapeId, disciplinaId: pocoesId, turmaId: turma3Id },
+    {
+      professorId: mcgonagallId,
+      disciplinaId: transfiguracaoId,
+      turmaId: turma3Id,
+    },
+    { professorId: flitwickId, disciplinaId: feiticosId, turmaId: turma1Id },
+    { professorId: flitwickId, disciplinaId: feiticosId, turmaId: turma3Id },
+  ];
 
-/**
- * Função auxiliar para criar matrículas
- */
-async function seedMatriculas(
-  alunos: any[],
-  disciplinas: Disciplina[]
-): Promise<number> {
-  let count = 0;
-  const disciplinaFeiticosId = disciplinas.find(
-    (d) => d.nome === "Feitiços"
-  )?.id;
-  const disciplinaPocoesId = disciplinas.find((d) => d.nome === "Poções")?.id;
-
-  if (!disciplinaFeiticosId || !disciplinaPocoesId) {
-    console.log(
-      "⚠️  Não foi possível encontrar IDs de disciplinas. Pulando matrículas."
-    );
-    return 0;
-  }
-
-  for (const aluno of alunos) {
-    // Matricular todos os alunos em Feitiços
-    await prisma.matricula.upsert({
-      where: {
-        alunoId_disciplinaId: {
-          alunoId: aluno.id,
-          disciplinaId: disciplinaFeiticosId,
-        },
-      },
-      update: {},
-      create: { alunoId: aluno.id, disciplinaId: disciplinaFeiticosId },
-    });
-    count++;
-
-    // Matricular metade dos alunos em Poções
-    if (aluno.nome.includes("Potter") || aluno.nome.includes("Malfoy")) {
-      await prisma.matricula.upsert({
-        where: {
-          alunoId_disciplinaId: {
-            alunoId: aluno.id,
-            disciplinaId: disciplinaPocoesId,
+  for (const attr of atribuicoes) {
+    if (attr.professorId && attr.disciplinaId && attr.turmaId) {
+      try {
+        await prisma.turmaDisciplina.upsert({
+          where: {
+            professorId_disciplinaId_turmaId: {
+              professorId: attr.professorId!,
+              disciplinaId: attr.disciplinaId!,
+              turmaId: attr.turmaId!,
+            },
           },
-        },
-        update: {},
-        create: { alunoId: aluno.id, disciplinaId: disciplinaPocoesId },
-      });
-      count++;
+          update: {},
+          create: {
+            professorId: attr.professorId!,
+            disciplinaId: attr.disciplinaId!,
+            turmaId: attr.turmaId!,
+          },
+        });
+      } catch (e: any) {
+        console.error(`❌ Erro ao atribuir TurmaDisciplina: ${e.message}`);
+      }
     }
   }
-  return count;
+
+  // =========================================================================
+  // 2.8 Matrículas
+  // =========================================================================
+  console.log("\n📝 Criando Matrículas...");
+  if (feiticosId && pocoesId) {
+    for (const aluno of alunosCriados) {
+      const createMatricula = async (alunoId: number, disciplinaId: number) => {
+        try {
+          await prisma.matricula.upsert({
+            where: { alunoId_disciplinaId: { alunoId, disciplinaId } },
+            update: {},
+            create: { alunoId, disciplinaId },
+          });
+        } catch {}
+      };
+      await createMatricula(aluno.id, feiticosId);
+      if (aluno.nome.includes("Potter") || aluno.nome.includes("Malfoy"))
+        await createMatricula(aluno.id, pocoesId);
+    }
+  }
+
+  console.log("\n✅ SEED FINALIZADO!");
 }
 
-// Executa o seed
-(async () => {
-  try {
-    await seedAll();
-  } catch (error) {
-    console.error("❌ Falha no seed:", error);
+// =========================================================================
+// 3. Execução do Seed
+// =========================================================================
+
+seedAll()
+  .catch((e) => {
+    console.error("❌ Erro no seed:", e);
     process.exit(1);
-  } finally {
+  })
+  .finally(async () => {
     await prisma.$disconnect();
-  }
-})();
+  });

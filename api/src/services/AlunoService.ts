@@ -1,88 +1,176 @@
-// src/services/AlunoService.ts
-
 import { prisma } from "../database/prisma";
 import { Aluno, Prisma } from "@prisma/client";
+import * as bcrypt from "bcryptjs";
 
-// --- Definição de Tipos ---
+// =========================================================================
+// TIPOS
+// =========================================================================
 
-// Tipo para dados obrigatórios na criação de um Aluno
-// Excluindo 'id', 'createdAt', 'updatedAt' e usando 'nome', 'email', 'cpf', 'senha'
-// Incluí 'casaId' e 'turmaId' que são chaves estrangeiras necessárias para a criação.
-type AlunoCreateData = Omit<Aluno, "id" | "createdAt" | "updatedAt">;
+export type AlunoCreateData = Omit<Aluno, "id" | "createdAt" | "updatedAt">;
+export type AlunoUpdateData = Partial<AlunoCreateData>;
 
-// Tipo para dados opcionais na atualização de um Aluno
-type AlunoUpdateData = Partial<AlunoCreateData>;
+export const alunoSelectPayload = Prisma.validator<Prisma.AlunoSelect>()({
+  id: true,
+  nome: true,
+  email: true,
+  cpf: true,
+  telefone: true,
+  dataNascimento: true,
+  matricula: true,
+  turno: true,
+  turma: { select: { id: true, serie: true, turno: true } },
+  casa: { select: { id: true, nome: true } },
+  createdAt: true,
+  updatedAt: true,
+});
 
-// --- Funções CRUD ---
+export type AlunoResponseData = Prisma.AlunoGetPayload<{
+  select: typeof alunoSelectPayload;
+}>;
 
-/**
- * Cria um novo aluno no banco de dados.
- * @param data Dados do aluno a ser criado.
- * @returns O aluno criado.
- */
-export const create = async (data: AlunoCreateData): Promise<Aluno> => {
-  // Nota: Você deve garantir que 'senha' seja hashed antes de chamar esta função.
+// =========================================================================
+// CREATE
+// =========================================================================
+
+export const create = async (
+  data: AlunoCreateData
+): Promise<AlunoResponseData> => {
+  if (data.turmaId) {
+    const turmaExists = await prisma.turma.findUnique({
+      where: { id: data.turmaId },
+    });
+    if (!turmaExists) {
+      throw new Error(`Turma com id ${data.turmaId} não existe.`);
+    }
+  }
+
+  if (data.casaId !== null && data.casaId !== undefined) {
+    const casaExists = await prisma.casa.findUnique({
+      where: { id: data.casaId },
+    });
+    if (!casaExists) throw new Error(`Casa com id ${data.casaId} não existe.`);
+  }
+
+  const existing = await prisma.aluno.findFirst({
+    where: { OR: [{ email: data.email }, { cpf: data.cpf }] },
+  });
+  if (existing) throw new Error("E-mail ou CPF já cadastrado no sistema.");
+
+  const hashedPassword = await bcrypt.hash(data.senha, 10);
+
+  let dataNascimentoIso: Date | undefined;
+  if (data.dataNascimento) {
+    if (data.dataNascimento.includes("/")) {
+      const [day, month, year] = data.dataNascimento.split("/").map(Number);
+      if (!day || !month || !year)
+        throw new Error("Data de nascimento inválida");
+      dataNascimentoIso = new Date(year, month - 1, day);
+    } else if (data.dataNascimento.includes("-")) {
+      const d = new Date(data.dataNascimento);
+      if (isNaN(d.getTime())) throw new Error("Data de nascimento inválida");
+      dataNascimentoIso = d;
+    } else {
+      throw new Error("Data de nascimento inválida");
+    }
+  }
+
+  const { casaId, turmaId, ...rest } = data;
+  const createData: any = {
+    ...rest,
+    senha: hashedPassword,
+    dataNascimento: dataNascimentoIso,
+    turma: { connect: { id: turmaId } },
+  };
+
+  if (casaId) createData.casa = { connect: { id: casaId } };
+
   return prisma.aluno.create({
-    data,
+    data: createData,
+    select: alunoSelectPayload,
   });
 };
 
-/**
- * Retorna todos os alunos, incluindo suas Casas e Turmas (Série/Turno).
- * @returns Lista de alunos.
- */
-export const getAll = async (): Promise<Aluno[]> => {
-  return prisma.aluno.findMany({
-    // 'include' é usado para buscar as relações definidas no schema.prisma
-    include: {
-      casa: true,
-      turma: true,
-      matriculas: {
-        include: { disciplina: true }, // Opcional: Inclui disciplinas matriculadas
-      },
-    },
-  });
+// =========================================================================
+// GET ALL
+// =========================================================================
+
+export const getAll = async (): Promise<AlunoResponseData[]> => {
+  return prisma.aluno.findMany({ select: alunoSelectPayload });
 };
 
-/**
- * Retorna um aluno pelo ID, incluindo detalhes de Casa e Turma.
- * @param id ID do aluno.
- * @returns O aluno ou null.
- */
-export const getById = async (id: number): Promise<Aluno | null> => {
+// =========================================================================
+// GET BY ID
+// =========================================================================
+
+export const getById = async (
+  id: number
+): Promise<AlunoResponseData | null> => {
   return prisma.aluno.findUnique({
     where: { id },
-    include: {
-      casa: true,
-      turma: true,
-      matriculas: {
-        include: { disciplina: true },
-      },
-    },
+    select: alunoSelectPayload,
   });
 };
 
-/**
- * Atualiza os dados de um aluno.
- * @param id ID do aluno.
- * @param data Dados para atualização.
- * @returns O aluno atualizado.
- */
+// =========================================================================
+// UPDATE
+// =========================================================================
+
 export const update = async (
   id: number,
   data: AlunoUpdateData
-): Promise<Aluno> => {
+): Promise<AlunoResponseData> => {
+  const alunoAtual = await prisma.aluno.findUnique({ where: { id } });
+  if (!alunoAtual) throw new Error(`Aluno com id ${id} não encontrado.`);
+
+  const { casaId, turmaId, dataNascimento, ...rest } = data;
+  const updateData: any = { ...rest };
+
+  if (turmaId && turmaId !== alunoAtual.turmaId) {
+    updateData.turma = { connect: { id: turmaId } };
+  }
+
+  if (casaId !== undefined && casaId !== alunoAtual.casaId) {
+    updateData.casa =
+      casaId === null ? { disconnect: true } : { connect: { id: casaId } };
+  }
+
+  if (dataNascimento) {
+    let novaData: Date;
+    if (dataNascimento.includes("/")) {
+      const [day, month, year] = dataNascimento.split("/").map(Number);
+      if (!day || !month || !year)
+        throw new Error("Data de nascimento inválida");
+      novaData = new Date(year, month - 1, day);
+    } else if (dataNascimento.includes("-")) {
+      novaData = new Date(dataNascimento);
+      if (isNaN(novaData.getTime()))
+        throw new Error("Data de nascimento inválida");
+    } else {
+      throw new Error("Data de nascimento inválida");
+    }
+
+    if (
+      alunoAtual.dataNascimento?.toISOString().split("T")[0] !==
+      novaData.toISOString().split("T")[0]
+    ) {
+      updateData.dataNascimento = novaData;
+    }
+  }
+
+  if (data.senha) updateData.senha = await bcrypt.hash(data.senha, 10);
+
   return prisma.aluno.update({
     where: { id },
-    data,
+    data: updateData,
+    select: alunoSelectPayload,
   });
 };
 
-/**
- * Remove um aluno pelo ID.
- * @param id ID do aluno.
- * @returns O aluno removido.
- */
-export const remove = async (id: number): Promise<Aluno> => {
-  return prisma.aluno.delete({ where: { id } });
+// =========================================================================
+// DELETE
+// =========================================================================
+
+export const remove = async (id: number): Promise<AlunoResponseData> => {
+  await prisma.matricula.deleteMany({ where: { alunoId: id } });
+  return prisma.aluno.delete({ where: { id }, select: alunoSelectPayload });
 };

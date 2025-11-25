@@ -4,27 +4,33 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+    />
+    <title>escola-hogwarts-api</title>
+    <!-- FIX FINAL para Scroll: Zera margens globais para garantir que o 100vh funcione -->
+    <style>
+      /* Anula margens e paddings padrão do navegador para body e html */
+      html,
+      body,
+      #root {
+        margin: 0;
+        padding: 0;
+        /* Garante que ocupem a altura total da viewport */
+        height: 100%;
+        width: 100%;
+        /* Esconde qualquer overflow mínimo, se necessário */
+        overflow-x: hidden;
+      }
+      body {
+        /* Define a cor de fundo do body caso o root não preencha tudo (ajuste de segurança) */
+        background-color: #1a1a1a; /* Cor de fundo BG_DEEP_STONE */
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
-      />
-      <title>escola-hogwarts-api</title>
-    </head>
-    <body>
-      <div id="root"></div>
-      <script type="module" src="/src/main.tsx"></script>
-    </body>
-  </html>
 </html>

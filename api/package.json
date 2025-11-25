@@ -10,7 +10,7 @@
     "prisma:generate": "dotenv -c -- npx prisma generate --schema ./prisma/schema.prisma",
     "prisma:migrate": "dotenv -c -- npx prisma migrate dev --schema ./prisma/schema.prisma",
     "prisma:studio": "npx prisma studio",
-    "seed": "ts-node src/seed.ts",
+    "seed": "dotenv -c -- node -r ts-node/register src/scripts/seedAll.ts",
     "setup": "npm install && npm run prisma:generate && npm run prisma:migrate"
   },
   "keywords": [

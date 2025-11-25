@@ -1,140 +1,133 @@
+// src/schema.prisma
+
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// --- SECRETARIO ---
+// --- 1. ENTIDADES DE AUTENTICAÇÃO E ADMINISTRAÇÃO ---
+
 model Secretario {
-  id        Int      @id @default(autoincrement())
-  nome      String
-  email     String   @unique
-  senha     String
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  nome      String
+  email     String   @unique
+  senha     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// --- TURMA/SERIE ---
+// --- 2. ENTIDADES DE ESTRUTURA ---
+
 model Turma {
-  id        Int      @id @default(autoincrement())
-  serie     String   
-  turno     String   
-  
-  // Relação 1-para-N: Uma Turma tem muitos Alunos
-  alunos    Aluno[]
-  
-  // Relação N:M: Turma com Disciplinas (via TurmaDisciplina)
-  disciplinas TurmaDisciplina[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int               @id @default(autoincrement())
+  serie       String // Ex: "6º Ano", "Ensino Médio 1"
+  turno       String // Recomendado usar Enum (Turno) se for fixo.
+  alunos      Aluno[]
+  disciplinas TurmaDisciplina[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
 }
 
-// --- RECURSO 1: CASA ---
 model Casa {
-  id        Int      @id @default(autoincrement())
-  nome      String   @unique
-  mascote   String?
-  fundador  String?
-  
-  // Relação 1-para-N: Uma Casa tem muitos Alunos
-  alunos    Aluno[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  nome      String   @unique // Ex: Grifinória
+  mascote   String?
+  fundador  String?
+  cor       String
+  diretor   String
+  alunos    Aluno[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
 }
 
-// --- RECURSO 2: PROFESSOR ---
-model Professor {
-  id        Int      @id @default(autoincrement())
-  nome      String
-  email     String   @unique
-  cpf       String   @unique
-  senha     String
-  
-  // Relação N:M: Professor com Disciplinas e Turmas (via TurmaDisciplina)
-  turmasDisciplinas TurmaDisciplina[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// --- RECURSO 3: DISCIPLINA ---
 model Disciplina {
-  id        Int      @id @default(autoincrement())
-  nome      String   @unique
-  
-  // Relação N:M: Disciplina com Professor e Turma (via TurmaDisciplina)
+  id                Int               @id @default(autoincrement())
+  nome              String            @unique
+  cargaHoraria      Int
+  eObrigatoria      Boolean // Recomendado: padronizar para `isObrigatoria`
+  matriculas        Matricula[]
+  turmasDisciplinas TurmaDisciplina[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+}
+
+// --- 3. ENTIDADES DE USUÁRIOS ---
+
+model Professor {
+  id                Int               @id @default(autoincrement())
+  nome              String
+  email             String            @unique
+  cpf               String            @unique
+  senha             String
+  telefone          String
+  matricula         String            @unique // ✅ REVISÃO: Matrícula deve ser UNIQUE
+  departamento      String?
   turmasDisciplinas TurmaDisciplina[]
-  
-  // Relação N:M: Disciplina com Alunos (via Matricula)
-  matriculas Matricula[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
 }
 
-// TABELA INTERMEDIÁRIA PARA RELACIONAR PROFESSOR, DISCIPLINA E TURMA ---
-// Um professor ministra uma Disciplina em uma Turma (e Turno) específica.
-model TurmaDisciplina {
-  id            Int         @id @default(autoincrement())
-  
-  professorId   Int
-  professor     Professor   @relation(fields: [professorId], references: [id])
-  
-  disciplinaId  Int
-  disciplina    Disciplina  @relation(fields: [disciplinaId], references: [id])
-  
-  turmaId       Int
-  turma         Turma       @relation(fields: [turmaId], references: [id])
-  
-  @@unique([professorId, disciplinaId, turmaId])
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// --- RECURSO 4: ALUNO ---
 model Aluno {
-  id        Int      @id @default(autoincrement())
-  nome      String
-  email     String   @unique
-  cpf       String   @unique
-  senha     String
-  
-  // Chave estrangeira para Casa (parte do tema Hogwarts)
-  casaId    Int?      
-  casa      Casa?     @relation(fields: [casaId], references: [id])
-  
-  // Chave estrangeira para Turma (Série e Turno)
-  turmaId   Int?
-  turma     Turma?    @relation(fields: [turmaId], references: [id])
-  
-  // Relação N:M: Aluno com Disciplinas (via Matricula)
-  matriculas Matricula[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             Int         @id @default(autoincrement())
+  nome           String
+  email          String      @unique
+  cpf            String      @unique
+  senha          String
+  dataNascimento DateTime    @db.Date // ✅ REVISÃO: Usar Date para datas de nascimento
+  telefone       String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  matricula      String     @unique
+  turno          String     
+  
+  // RELAÇÕES
+  casaId         Int?
+  turmaId        Int // ✅ REVISÃO: Turma geralmente é obrigatória
+  
+  casa           Casa?       @relation(fields: [casaId], references: [id])
+  turma          Turma       @relation(fields: [turmaId], references: [id]) // Turma deve ser NOT NULL
+  matriculas     Matricula[]
 }
 
-// Tabela intermediária N:M (Aluno -> Disciplina)
-// Associa o Aluno à Disciplina e pode conter dados de nota
+// --- 4. TABELAS DE RELACIONAMENTO/JUNÇÃO ---
+
+model TurmaDisciplina {
+  id           Int        @id @default(autoincrement())
+  professorId  Int
+  disciplinaId Int
+  turmaId      Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  disciplina   Disciplina @relation(fields: [disciplinaId], references: [id], onDelete: Cascade)
+  professor    Professor  @relation(fields: [professorId], references: [id], onDelete: Cascade)
+  turma        Turma      @relation(fields: [turmaId], references: [id])
+
+  // Garante que um professor só ministre UMA disciplina em UMA turma
+  @@unique([professorId, disciplinaId, turmaId])
+  // ✅ REVISÃO: Adicionar índice composto para busca eficiente por Turma/Disciplina
+  @@index([turmaId, disciplinaId]) 
+}
+
 model Matricula {
-  id            Int       @id @default(autoincrement())
-  grade         Decimal?  @db.Decimal(3, 1) // Nota final ou parcial
-  
-  alunoId       Int
-  aluno         Aluno     @relation(fields: [alunoId], references: [id])
+  id           Int        @id @default(autoincrement())
+  alunoId      Int
+  disciplinaId Int
+  grade        Decimal?   @db.Decimal(3, 1) // Decimal para notas (ex: 9.5)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  
+  aluno        Aluno      @relation(fields: [alunoId], references: [id])
+  disciplina   Disciplina @relation(fields: [disciplinaId], references: [id])
 
-  disciplinaId  Int
-  disciplina    Disciplina @relation(fields: [disciplinaId], references: [id])
-
-  @@unique([alunoId, disciplinaId])
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Garante que um aluno só se matricule UMA VEZ em cada disciplina
+  @@unique([alunoId, disciplinaId])
 }

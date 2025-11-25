@@ -1,123 +1,248 @@
-// src/controllers/ProfessorController.ts
+// =========================================================================
+// ProfessorController
+// =========================================================================
 
 import { Request, Response } from "express";
 import * as professorService from "../services/ProfessorService";
+import { ZodError } from "zod";
 
-/**
- * Retorna todos os professores cadastrados no sistema.
- */
-export const getAllProfessores = async (req: Request, res: Response) => {
+// =========================================================================
+// TIPAGEM DE REQUISIÇÃO (Autenticada)
+// =========================================================================
+interface AuthRequest extends Request {
+  user?: {
+    id: number;
+    email?: string;
+    role: string;
+  };
+}
+
+// =========================================================================
+// createProfessor (POST /professores)
+// =========================================================================
+export const createProfessor = async (req: Request, res: Response) => {
   try {
-    // O Service deve garantir que a senha seja omitida do retorno.
-    const professores = await professorService.getAll();
+    const novo = await professorService.createProfessor(req.body);
+    return res.status(201).json(novo);
+  } catch (error: any) {
+    if (error instanceof ZodError) {
+      return res.status(400).json({
+        message: "Erro de validação. Verifique os campos enviados.",
+        errors: error.issues,
+      });
+    }
+    if (error.code === "P2002") {
+      return res.status(409).json({
+        message: `Campo único já existe: ${error.meta?.target}`,
+      });
+    }
+    return res
+      .status(500)
+      .json({ message: error.message || "Erro interno ao criar professor." });
+  }
+};
+
+// =========================================================================
+// getAllProfessores (GET /professores)
+// =========================================================================
+export const getAllProfessores = async (_: Request, res: Response) => {
+  try {
+    const professores = await professorService.getProfessores();
     return res.json(professores);
   } catch (error: any) {
-    // Erro geral de servidor/conexão
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      message: error.message || "Erro interno ao listar professores.",
+    });
   }
 };
 
-/**
- * Retorna um professor específico por ID.
- */
+// =========================================================================
+// getProfessorById (GET /professores/:id)
+// =========================================================================
 export const getProfessorById = async (req: Request, res: Response) => {
   try {
-    const professor = await professorService.getById(Number(req.params.id));
+    const id = Number(req.params.id);
+    const prof = await professorService.getById(id);
 
-    if (!professor) {
+    if (!prof) {
       return res
         .status(404)
-        .json({ message: "Professor(a) de Hogwarts não encontrado(a)." });
+        .json({ message: "Professor(a) não encontrado(a)." });
     }
 
-    // Retorno: remove a senha antes de enviar (se ela não foi omitida no Service)
-    const { senha, ...professorResponse } = professor;
-    return res.json(professorResponse);
+    const { senha, ...rest } = prof;
+    return res.json(rest);
   } catch (error: any) {
-    return res.status(500).json({ message: error.message });
+    return res
+      .status(500)
+      .json({ message: error.message || "Erro interno ao buscar professor." });
   }
 };
 
-/**
- * Atualiza os dados de um professor.
- */
+// =========================================================================
+// updateProfessor (PATCH /professores/:id)
+// =========================================================================
 export const updateProfessor = async (req: Request, res: Response) => {
   try {
-    const professor = await professorService.update(
-      Number(req.params.id),
-      req.body
-    );
-
-    // Retorno: remove a senha antes de enviar (se ela não foi omitida no Service)
-    const { senha, ...professorResponse } = professor;
-    return res.json(professorResponse);
+    const id = Number(req.params.id);
+    const updated = await professorService.updateProfessor(id, req.body);
+    return res.json(updated);
   } catch (error: any) {
-    // P2025: Registro não encontrado para atualização
     if (error.code === "P2025") {
       return res
         .status(404)
         .json({ message: "Professor(a) não encontrado(a)." });
     }
-    // P2002: Campo único já existe (e.g., email ou CPF)
     if (error.code === "P2002") {
       return res
         .status(409)
-        .json({ message: `Campo único já existe: ${error.meta.target}` });
+        .json({ message: `Campo único já existe: ${error.meta?.target}` });
     }
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      message: error.message || "Erro interno ao atualizar professor.",
+    });
   }
 };
 
-/**
- * Remove um professor.
- */
+// =========================================================================
+// deleteProfessor (DELETE /professores/:id)
+// =========================================================================
 export const deleteProfessor = async (req: Request, res: Response) => {
   try {
-    await professorService.remove(Number(req.params.id));
-    return res.status(204).send(); // HTTP 204: Sucesso, sem conteúdo
+    const id = Number(req.params.id);
+    await professorService.deleteProfessor(id);
+    return res.status(204).send();
   } catch (error: any) {
-    // P2025: Registro não encontrado para deleção
     if (error.code === "P2025") {
       return res
         .status(404)
         .json({ message: "Professor(a) não encontrado(a)." });
     }
-    // P2003: Falha na restrição de chave estrangeira (professor ainda tem turmas/disciplinas)
     if (error.code === "P2003") {
       return res.status(409).json({
         message:
-          "Não é possível remover: O professor ainda possui vínculos com turmas ou disciplinas.",
+          "Não é possível remover: o professor possui vínculos. Configure o CASCADE DELETE no Prisma.",
       });
     }
-    return res.status(500).json({ message: error.message });
+    return res
+      .status(500)
+      .json({ message: error.message || "Erro interno ao deletar professor." });
   }
 };
 
-// -------------------------------------------------------------
-// OPERAÇÃO ESPECÍFICA DE NEGÓCIO
-// -------------------------------------------------------------
-
-/**
- * Retorna todos os alunos que estão matriculados nas disciplinas lecionadas por este professor.
- * (Consulta complexa de associação: Professor -> TurmaDisciplina -> Matricula -> Aluno)
- */
-export const getAlunosByProfessor = async (req: Request, res: Response) => {
+// =========================================================================
+// vincularDisciplinasDoProfessor (POST /professores/:id/vinculos)
+// =========================================================================
+export const vincularDisciplinasDoProfessor = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const professorId = Number(req.params.id);
+    const { vinculos } = req.body;
 
-    const alunos = (await professorService.getAlunos(professorId)) as unknown;
-
-    // Se a lista de alunos for vazia, mas a operação foi bem-sucedida.
-    if (!Array.isArray(alunos) || (alunos as unknown[]).length === 0) {
-      return res.status(200).json([]);
+    if (!Array.isArray(vinculos)) {
+      return res.status(400).json({
+        message: "O corpo da requisição deve conter um array de 'vinculos'.",
+      });
     }
 
-    return res.json(alunos);
+    const hasInvalidVinculos = vinculos.some(
+      (v: any) =>
+        typeof v.disciplinaId !== "number" || typeof v.turmaId !== "number"
+    );
+
+    if (hasInvalidVinculos) {
+      return res.status(400).json({
+        message:
+          "Cada objeto de vínculo deve ter 'disciplinaId' e 'turmaId' como números.",
+      });
+    }
+
+    const updatedProfessor = await professorService.vincularDisciplinas(
+      professorId,
+      vinculos
+    );
+
+    return res.json(updatedProfessor);
   } catch (error: any) {
-    // Aqui, você pode incluir um erro 404 específico se o service confirmar que o professorId não existe
+    if (
+      error.code === "P2025" ||
+      error.message.includes("Professor não encontrado")
+    ) {
+      return res.status(404).json({
+        message: "Professor(a) não encontrado(a) para vincular disciplinas.",
+      });
+    }
+    return res.status(500).json({
+      message: error.message || "Erro interno ao vincular disciplinas.",
+    });
+  }
+};
+
+// =========================================================================
+// getProfessorDetails (GET /professores/:id/details)
+// =========================================================================
+export const getProfessorDetails = async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const details = await professorService.getProfessorDetails(id);
+
+    if (!details) {
+      return res.status(404).json({
+        message: "Professor(a) não encontrado(a) ou sem dados detalhados.",
+      });
+    }
+
+    return res.json(details);
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Erro interno ao buscar detalhes do professor.",
+    });
+  }
+};
+
+// =========================================================================
+// getAlunosByProfessor (GET /professores/:id/alunos)
+// =========================================================================
+export const getAlunosByProfessor = async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const alunos = await professorService.getProfessorAlunos(id);
+
+    return res.status(200).json(alunos);
+  } catch (error: any) {
     if (error.message.includes("Professor não encontrado")) {
       return res.status(404).json({ message: error.message });
     }
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      message: error.message || "Erro interno ao buscar alunos do professor.",
+    });
+  }
+};
+
+// =========================================================================
+// getMeDetails (GET /professor/me)
+// =========================================================================
+export const getMeDetails = async (req: AuthRequest, res: Response) => {
+  const userEmail = req.user?.email;
+
+  if (!userEmail) {
+    return res.status(401).json({
+      message:
+        "Token inválido ou sem email de usuário (Autenticação Requerida).",
+    });
+  }
+
+  try {
+    const details = await professorService.getMeDetailsByEmail(userEmail);
+    return res.json(details);
+  } catch (error: any) {
+    if (error.message.includes("não encontrado")) {
+      return res.status(404).json({ message: error.message });
+    }
+    return res.status(500).json({
+      message: error.message || "Erro interno ao buscar detalhes do professor.",
+    });
   }
 };

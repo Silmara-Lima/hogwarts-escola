@@ -1,27 +1,25 @@
-// src/controllers/DisciplinaController.ts
+// =========================================================================
+// DisciplinaController
+// =========================================================================
 
 import { Request, Response } from "express";
 import * as disciplinaService from "../services/DisciplinaService";
-import { ZodError } from "zod"; // Para validação, se aplicável
+import { ZodError } from "zod";
 
-/**
- * Cria uma nova Disciplina (Restrita ao Secretário).
- */
+// =========================================================================
+// createDisciplina (POST /disciplinas)
+// =========================================================================
 export const createDisciplina = async (req: Request, res: Response) => {
   try {
-    // [OPCIONAL] Adicionar validação Zod aqui.
-
     const disciplina = await disciplinaService.create(req.body);
     return res.status(201).json(disciplina);
   } catch (error: any) {
     if (error instanceof ZodError) {
-      const zodError = error as ZodError<any>;
       return res.status(400).json({
         message: "Erro de validação de dados.",
-        errors: zodError.issues,
+        errors: error.issues,
       });
     }
-    // P2002: Campo único (nome da disciplina) já existe
     if (error.code === "P2002") {
       return res
         .status(409)
@@ -31,9 +29,9 @@ export const createDisciplina = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Retorna todas as Disciplinas.
- */
+// =========================================================================
+// getAllDisciplinas (GET /disciplinas)
+// =========================================================================
 export const getAllDisciplinas = async (req: Request, res: Response) => {
   try {
     const disciplinas = await disciplinaService.getAll();
@@ -43,26 +41,24 @@ export const getAllDisciplinas = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Retorna uma Disciplina pelo ID.
- */
+// =========================================================================
+// getDisciplinaById (GET /disciplinas/:id)
+// =========================================================================
 export const getDisciplinaById = async (req: Request, res: Response) => {
   try {
     const disciplina = await disciplinaService.getById(Number(req.params.id));
-
     if (!disciplina) {
       return res.status(404).json({ message: "Disciplina não encontrada." });
     }
-
     return res.json(disciplina);
   } catch (error: any) {
     return res.status(500).json({ message: error.message });
   }
 };
 
-/**
- * Atualiza os dados de uma Disciplina (Restrita ao Secretário).
- */
+// =========================================================================
+// updateDisciplina (PATCH /disciplinas/:id)
+// =========================================================================
 export const updateDisciplina = async (req: Request, res: Response) => {
   try {
     const disciplina = await disciplinaService.update(
@@ -71,11 +67,9 @@ export const updateDisciplina = async (req: Request, res: Response) => {
     );
     return res.json(disciplina);
   } catch (error: any) {
-    // P2025: Registro não encontrado para atualização
     if (error.code === "P2025") {
       return res.status(404).json({ message: "Disciplina não encontrada." });
     }
-    // P2002: Campo único já existe
     if (error.code === "P2002") {
       return res.status(409).json({
         message: `Nome da Disciplina já existe: ${error.meta.target}`,
@@ -85,19 +79,17 @@ export const updateDisciplina = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Remove uma Disciplina (Restrita ao Secretário).
- */
+// =========================================================================
+// deleteDisciplina (DELETE /disciplinas/:id)
+// =========================================================================
 export const deleteDisciplina = async (req: Request, res: Response) => {
   try {
     await disciplinaService.remove(Number(req.params.id));
-    return res.status(204).send(); // HTTP 204: Sucesso, sem conteúdo
+    return res.status(204).send();
   } catch (error: any) {
-    // P2025: Registro não encontrado para deleção
     if (error.code === "P2025") {
       return res.status(404).json({ message: "Disciplina não encontrada." });
     }
-    // P2003: Falha na restrição de chave estrangeira (a disciplina possui alunos matriculados ou professores alocados)
     if (error.code === "P2003") {
       return res.status(409).json({
         message:

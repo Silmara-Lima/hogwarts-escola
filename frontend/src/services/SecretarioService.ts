@@ -1,12 +1,16 @@
-import { api } from "../apiCore/apiCore";
+import api from "./api";
+import type { Professor, ProfessorCreateData } from "../types/Professor";
+import type { Aluno, CreateAlunoData } from "../types/Alunos";
 
-// --- Tipos de Secretário/Administrativo ---
+// ======================================================
+// TIPOS DE SECRETÁRIO/ADMINISTRATIVO
+// ======================================================
 export interface Secretario {
   id: number;
   nome: string;
   email: string;
-  cargo: string; // Ex: 'Assistente Administrativo', 'Coordenador', etc.
-  setor: string; // Ex: 'Registro Acadêmico', 'Financeiro'
+  cargo: string;
+  setor: string;
 }
 
 export interface CreateSecretarioDTO {
@@ -14,6 +18,7 @@ export interface CreateSecretarioDTO {
   email: string;
   cargo: string;
   setor: string;
+  senha: string;
 }
 
 export interface UpdateSecretarioDTO {
@@ -21,58 +26,79 @@ export interface UpdateSecretarioDTO {
   email?: string;
   cargo?: string;
   setor?: string;
+  senha?: string;
 }
-// ------------------------------------------
 
-const ENDPOINT = "/secretarios";
+export interface CasaStats {
+  nome: string;
+  alunos: number;
+}
 
-/**
- * Busca todos os secretários/membros da equipe administrativa.
- * @returns Promise<Secretario[]> Lista de secretários.
- */
-export const getSecretarios = async (): Promise<Secretario[]> => {
-  // GET http://localhost:3000/api/secretarios
-  const response = await api.get<Secretario[]>(ENDPOINT);
+export interface DashboardStats {
+  totalAlunos: number;
+  totalProfessores: number;
+  turmasAtivas: number;
+  mediaNotas: number;
+  casas: CasaStats[];
+}
+
+// ======================================================
+// ENDPOINTS
+// ======================================================
+const ENDPOINT_CRUD = "/secretarios";
+const ENDPOINT_ADM = "/secretario";
+
+// ======================================================
+// AÇÕES ADMINISTRATIVAS
+// ======================================================
+export const getDashboardStats = async (): Promise<DashboardStats> => {
+  const response = await api.get<DashboardStats>(`${ENDPOINT_ADM}/dashboard`);
   return response.data;
 };
 
-/**
- * Cria um novo registro de secretário.
- * @param secretarioData Dados para criação do registro.
- * @returns Promise<Secretario> O registro criado, incluindo seu novo ID.
- */
+export const createAlunoBySecretario = async (
+  data: CreateAlunoData
+): Promise<Aluno> => {
+  const response = await api.post<Aluno>(`${ENDPOINT_ADM}/alunos`, data);
+  return response.data;
+};
+
+export const createProfessorBySecretario = async (
+  data: ProfessorCreateData
+): Promise<Professor> => {
+  const response = await api.post<Professor>(
+    `${ENDPOINT_ADM}/professores`,
+    data
+  );
+  return response.data;
+};
+
+// ======================================================
+// CRUD SECRETÁRIO
+// ======================================================
+export const getSecretarios = async (): Promise<Secretario[]> => {
+  const response = await api.get<Secretario[]>(ENDPOINT_CRUD);
+  return response.data;
+};
+
 export const createSecretario = async (
   secretarioData: CreateSecretarioDTO
 ): Promise<Secretario> => {
-  // POST http://localhost:3000/api/secretarios
-  const response = await api.post<Secretario>(ENDPOINT, secretarioData);
+  const response = await api.post<Secretario>(ENDPOINT_ADM, secretarioData);
   return response.data;
 };
 
-/**
- * Atualiza um registro de secretário existente.
- * @param id ID do secretário a ser atualizado.
- * @param secretarioData Dados parciais para atualização.
- * @returns Promise<Secretario> O registro atualizado.
- */
 export const updateSecretario = async (
   id: number,
   secretarioData: UpdateSecretarioDTO
 ): Promise<Secretario> => {
-  // PUT http://localhost:3000/api/secretarios/:id
   const response = await api.put<Secretario>(
-    `${ENDPOINT}/${id}`,
+    `${ENDPOINT_CRUD}/${id}`,
     secretarioData
   );
   return response.data;
 };
 
-/**
- * Deleta um registro de secretário pelo ID.
- * @param id ID do secretário a ser deletado.
- * @returns Promise<void>
- */
 export const deleteSecretario = async (id: number): Promise<void> => {
-  // DELETE http://localhost:3000/api/secretarios/:id
-  await api.delete(`${ENDPOINT}/${id}`);
+  await api.delete(`${ENDPOINT_CRUD}/${id}`);
 };

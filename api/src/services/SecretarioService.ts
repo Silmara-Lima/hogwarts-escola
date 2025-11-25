@@ -1,69 +1,83 @@
 import { prisma } from "../database/prisma";
 import { Aluno, Professor } from "@prisma/client";
-import { z } from "zod";
+import { randomUUID } from "crypto";
+import {
+  createAlunoSchema,
+  createProfessorSchema,
+  CreateAlunoData,
+  CreateProfessorData,
+} from "../schemas/validation";
 
-// --- 1. SCHEMAS ZOD (Definição para Validação) ---
+// =========================================================================
+// 1. SCHEMAS ZOD
+// =========================================================================
+export const AlunoCreateSchema = createAlunoSchema;
+export const ProfessorCreateSchema = createProfessorSchema;
 
-// Schema de criação de Aluno (Reutilizando a estrutura necessária)
-export const AlunoCreateSchema = z.object({
-  nome: z.string().min(3),
-  email: z.string().email(),
-  cpf: z.string().length(11),
-  senha: z.string().min(6), // A senha deve ser hashed no controller antes de ser passada aqui!
-  casaId: z.number().int(),
-  turmaId: z.number().int(),
-});
+// =========================================================================
+// 2. MÉTODOS DE GESTÃO
+// =========================================================================
 
-// Tipo derivado do Zod para Aluno
-type AlunoCreateInput = z.infer<typeof AlunoCreateSchema>;
+export const getDashboardStats = async () => {
+  const [totalProfessores, totalAlunos, totalTurmas, alunosPorCasa, casas] =
+    await Promise.all([
+      prisma.professor.count(),
+      prisma.aluno.count(),
+      prisma.turma.count(),
+      prisma.aluno.groupBy({ by: ["casaId"], _count: { id: true } }),
+      prisma.casa.findMany({ select: { id: true, nome: true } }),
+    ]);
 
-// Schema de criação de Professor
-export const ProfessorCreateSchema = z.object({
-  nome: z.string().min(3),
-  email: z.string().email(),
-  cpf: z.string().length(11),
-  senha: z.string().min(6), // A senha deve ser hashed no controller
-});
+  const casaMap = new Map(casas.map((c) => [c.id, c.nome]));
 
-// Tipo derivado do Zod para Professor
-type ProfessorCreateInput = z.infer<typeof ProfessorCreateSchema>;
+  const casasStats = alunosPorCasa
+    .filter((stat) => stat.casaId !== null)
+    .map((stat) => ({
+      nome: casaMap.get(stat.casaId!) || "Casa Desconhecida",
+      alunos: stat._count.id,
+    }));
 
-// --- 2. MÉTODOS DE GESTÃO ---
+  return {
+    totalProfessores,
+    totalAlunos,
+    turmasAtivas: totalTurmas,
+    casas: casasStats,
+  };
+};
 
-/**
- * Cria um novo Aluno.
- * @param data Dados do aluno validados.
- * @returns O aluno criado.
- */
-export const createAluno = async (data: AlunoCreateInput): Promise<Aluno> => {
-  // Nota: A validação Zod deve ser feita no Controller/Rota
-  // E a senha já deve ter sido hashed (ex: usando bcrypt) antes de chegar aqui.
+export const createAluno = async (data: CreateAlunoData): Promise<Aluno> => {
+  const payload = {
+    ...data,
+    telefone: data.telefone ?? "",
+  };
+
   return prisma.aluno.create({
-    data: data,
+    data: payload,
   });
 };
 
-/**
- * Cria um novo Professor.
- * @param data Dados do professor validados.
- * @returns O professor criado.
- */
 export const createProfessor = async (
-  data: ProfessorCreateInput
+  data: CreateProfessorData
 ): Promise<Professor> => {
-  // A senha já deve ter sido hashed.
+  const matriculaGerada = randomUUID();
+
+  const payload = {
+    ...data,
+    telefone: data.telefone ?? "",
+    matricula: matriculaGerada,
+  };
+
   return prisma.professor.create({
-    data: data,
+    data: payload,
   });
 };
 
-/**
- * Cadastra uma nova Disciplina.
- * @param nome Nome da disciplina.
- * @returns A disciplina criada.
- */
-export const createDisciplina = async (nome: string) => {
+export const createDisciplina = async (
+  nome: string,
+  cargaHoraria: number,
+  eObrigatoria: boolean
+) => {
   return prisma.disciplina.create({
-    data: { nome },
+    data: { nome, cargaHoraria, eObrigatoria },
   });
 };

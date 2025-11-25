@@ -1,24 +1,34 @@
-/**
- * Interface para a Casa de Hogwarts (Grifinória, Sonserina, etc.).
- */
+// =========================================================================
+// 1. Interfaces principais
+// =========================================================================
 export interface Casa {
   id: number;
   nome: string;
   diretor: string;
-  cor: string; // Ex: #7F0909
+  cor: string;
 }
 
-/**
- * Interface para a Turma (Ex: 1º Ano MATUTINO).
- */
+export interface Curso {
+  id: number;
+  nome: string;
+}
+
 export interface Turma {
   id: number;
+  serie: string;
   ano: number;
   turno: "MATUTINO" | "VESPERTINO" | "NOTURNO";
+  curso: Curso;
 }
 
+// =========================================================================
+// 2. DTOs
+// =========================================================================
 export type CreateCasaDTO = Omit<Casa, "id">;
 export type UpdateCasaDTO = Partial<CreateCasaDTO>;
 
-export type CreateTurmaDTO = Omit<Turma, "id">;
+export type CreateTurmaDTO = Omit<Turma, "id" | "curso"> & {
+  cursoId: number;
+};
+
 export type UpdateTurmaDTO = Partial<CreateTurmaDTO>;

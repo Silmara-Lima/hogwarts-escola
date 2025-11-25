@@ -1,32 +1,30 @@
 import { z } from "zod";
 
-// --- Schema de Criação de Matrícula ---
+// =========================================================
+// SCHEMA DE CRIAÇÃO DE MATRÍCULA
+// =========================================================
 export const createMatriculaSchema = z.object({
-  // dataMatricula substitui dataHora
   dataMatricula: z.string().min(1, "A data da matrícula é obrigatória."),
-
-  // observacoes substitui motivo (opcional)
   observacoes: z.string().optional(),
-
-  // alunoId substitui pacienteId
   alunoId: z
     .number({ message: "O aluno é obrigatório." })
     .int()
     .positive("Selecione um aluno válido (ID positivo)."),
-
-  // turmaId substitui medicoId
   turmaId: z
     .number({ message: "A turma é obrigatória." })
     .int()
     .positive("Selecione uma turma válida (ID positivo)."),
 });
 
-// --- Schema de Atualização de Matrícula ---
+// =========================================================
+// SCHEMA DE ATUALIZAÇÃO DE MATRÍCULA
+// =========================================================
 export const updateMatriculaSchema = createMatriculaSchema.extend({
-  // Adiciona o ID da matrícula para operações de atualização
   id: z.number().int().positive(),
 });
 
-// Tipos derivados para uso no TypeScript
+// =========================================================
+// TIPAGENS
+// =========================================================
 export type CreateMatriculaData = z.infer<typeof createMatriculaSchema>;
 export type UpdateMatriculaData = z.infer<typeof updateMatriculaSchema>;

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Aluno" ADD COLUMN     "turno" TEXT NOT NULL DEFAULT 'MATUTINO';
