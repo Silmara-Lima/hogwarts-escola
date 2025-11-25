@@ -10,12 +10,7 @@
     "skipLibCheck": true,
     "baseUrl": "./src",
     "lib": ["ES2020"],
-    "types": ["node", "express", "jsonwebtoken", "cors", "bcryptjs"],
-    "typeRoots": [
-      "./node_modules/@types",
-      "../node_modules/@types",
-      "./src/types"
-    ],
+    "typeRoots": ["./node_modules/@types", "./node_modules"],
     "paths": {
       "@utils/*": ["utils/*"],
       "@routes/*": ["routes/*"],
