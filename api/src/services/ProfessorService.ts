@@ -320,7 +320,7 @@ export const getProfessorAlunos = async (
       alunosDetalhesMap.set(aluno.id, {
         ...alunoSemCamposSensitivos,
         disciplinasLecionadasPeloProfessor: [m.disciplina.nome],
-        turmaId: m.turmaId,
+        turmaId: aluno.turmaId,
         turno: "",
         casaId: null,
       });

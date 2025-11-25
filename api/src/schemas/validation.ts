@@ -136,3 +136,13 @@ export const createTurmaDisciplinaSchema = z.object({
   disciplinaId: z.number().int().positive(),
   professorId: z.number().int().positive(),
 });
+
+// =========================================================================
+// TIPOS EXPORTADOS PARA SERVIÇOS
+// =========================================================================
+
+export type CreateProfessorData = z.infer<typeof createProfessorSchema>;
+export type UpdateProfessorData = z.infer<typeof updateProfessorSchema>;
+
+export type CreateAlunoData = z.infer<typeof createAlunoSchema>;
+export type UpdateAlunoData = z.infer<typeof updateAlunoSchema>;

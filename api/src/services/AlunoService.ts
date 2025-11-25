@@ -6,7 +6,13 @@ import * as bcrypt from "bcryptjs";
 // TIPOS
 // =========================================================================
 
-export type AlunoCreateData = Omit<Aluno, "id" | "createdAt" | "updatedAt">;
+export type AlunoCreateData = Omit<
+  Aluno,
+  "id" | "createdAt" | "updatedAt" | "dataNascimento"
+> & {
+  dataNascimento?: string | Date;
+};
+
 export type AlunoUpdateData = Partial<AlunoCreateData>;
 
 export const alunoSelectPayload = Prisma.validator<Prisma.AlunoSelect>()({
@@ -60,12 +66,11 @@ export const create = async (
 
   let dataNascimentoIso: Date | undefined;
   if (data.dataNascimento) {
-    if (data.dataNascimento.includes("/")) {
-      const [day, month, year] = data.dataNascimento.split("/").map(Number);
-      if (!day || !month || !year)
-        throw new Error("Data de nascimento inválida");
-      dataNascimentoIso = new Date(year, month - 1, day);
-    } else if (data.dataNascimento.includes("-")) {
+    const dataNascimentoStr = data.dataNascimento as string;
+
+    if (dataNascimentoStr.includes("/")) {
+      const [day, month, year] = dataNascimentoStr.split("/").map(Number);
+    } else if (dataNascimentoStr.includes("-")) {
       const d = new Date(data.dataNascimento);
       if (isNaN(d.getTime())) throw new Error("Data de nascimento inválida");
       dataNascimentoIso = d;
@@ -136,13 +141,16 @@ export const update = async (
 
   if (dataNascimento) {
     let novaData: Date;
-    if (dataNascimento.includes("/")) {
-      const [day, month, year] = dataNascimento.split("/").map(Number);
+
+    const dataNascimentoStr = dataNascimento as string;
+
+    if (dataNascimentoStr.includes("/")) {
+      const [day, month, year] = dataNascimentoStr.split("/").map(Number);
       if (!day || !month || !year)
         throw new Error("Data de nascimento inválida");
       novaData = new Date(year, month - 1, day);
-    } else if (dataNascimento.includes("-")) {
-      novaData = new Date(dataNascimento);
+    } else if (dataNascimentoStr.includes("-")) {
+      novaData = new Date(dataNascimentoStr);
       if (isNaN(novaData.getTime()))
         throw new Error("Data de nascimento inválida");
     } else {

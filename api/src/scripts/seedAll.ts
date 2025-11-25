@@ -81,6 +81,8 @@ const alunosData = [
     cpf: "55555555555",
     telefone: "11977771111",
     dataNascimento: new Date("1980-07-31"),
+    matricula: "202412234",
+    turno: "MATUTINO",
   },
   {
     nome: "Hermione Granger",
@@ -88,6 +90,8 @@ const alunosData = [
     cpf: "66666666666",
     telefone: "11977772222",
     dataNascimento: new Date("1979-09-19"),
+    matricula: "202413234",
+    turno: "MATUTINO",
   },
   {
     nome: "Draco Malfoy",
@@ -95,6 +99,8 @@ const alunosData = [
     cpf: "77777777777",
     telefone: "11977773333",
     dataNascimento: new Date("1980-06-05"),
+    matricula: "202414234",
+    turno: "MATUTINO",
   },
   {
     nome: "Luna Lovegood",
@@ -102,6 +108,8 @@ const alunosData = [
     cpf: "88888888888",
     telefone: "11977774444",
     dataNascimento: new Date("1981-02-13"),
+    matricula: "202415234",
+    turno: "MATUTINO",
   },
   {
     nome: "Cedrico Diggory",
@@ -109,6 +117,8 @@ const alunosData = [
     cpf: "99999999999",
     telefone: "11977775555",
     dataNascimento: new Date("1977-09-15"),
+    matricula: "202416234",
+    turno: "MATUTINO",
   },
 ];
 

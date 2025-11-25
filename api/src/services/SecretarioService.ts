@@ -46,9 +46,14 @@ export const getDashboardStats = async () => {
 };
 
 export const createAluno = async (data: CreateAlunoData): Promise<Aluno> => {
+  const matriculaGerada = randomUUID();
+  const turnoPadrao = "MATUTINO";
+
   const payload = {
     ...data,
     telefone: data.telefone ?? "",
+    matricula: matriculaGerada,
+    turno: turnoPadrao,
   };
 
   return prisma.aluno.create({
