@@ -92,7 +92,6 @@ O **Sistema de Hogwarts** é uma aplicação full-stack que permite:
 
 - **Node.js** 18 ou superior
 - **npm** 10+ ou **yarn** 4+
-- **Docker** e **Docker Compose**
 - **Git**
 
 ### 1️⃣ Clone o Repositório
