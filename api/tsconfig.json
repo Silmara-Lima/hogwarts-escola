@@ -8,11 +8,15 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "baseUrl": "./",
+    "baseUrl": "./src",
+    "lib": ["ES2020"],
+    "types": ["node", "express", "jsonwebtoken", "cors", "bcryptjs"],
     "paths": {
       "@utils/*": ["utils/*"],
       "@routes/*": ["routes/*"],
       "@middlewares/*": ["middlewares/*"]
     }
-  }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
