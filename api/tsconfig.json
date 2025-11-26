@@ -3,7 +3,7 @@
     "target": "es2020",
     "module": "commonjs",
     "rootDir": "src",
-    "outDir": "./dist",
+    "outDir": "dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -19,7 +19,6 @@
       "swagger-jsdoc",
       "swagger-ui-express"
     ],
-
     "paths": {
       "@utils/*": ["utils/*"],
       "@routes/*": ["routes/*"],
