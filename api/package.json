@@ -8,23 +8,10 @@
     "build": "npx tsc -p ./tsconfig.json",
     "start": "node dist/index.js",
     "prisma:generate": "dotenv -c -- npx prisma generate --schema ./prisma/schema.prisma",
-    "prisma:migrate": "dotenv -c -- npx prisma migrate dev --schema ./prisma/schema.prisma",
-    "prisma:studio": "npx prisma studio",
-    "seed": "dotenv -c -- node -r ts-node/register src/scripts/seedAll.ts",
-    "setup": "npm install && npm run prisma:generate && npm run prisma:migrate"
+    "prisma:migrate": "npx prisma migrate deploy",
+    "seed": "npx tsx src/scripts/seedAll.ts",
+    "setup": "npm install && npm run prisma:generate && npm run prisma:migrate && npm run seed"
   },
-  "keywords": [
-    "nodejs",
-    "typescript",
-    "prisma",
-    "postgresql",
-    "express",
-    "zod",
-    "hogwarts",
-    "api"
-  ],
-  "author": "Silmara Lima",
-  "license": "MIT",
   "dependencies": {
     "@prisma/client": "^6.19.0",
     "bcryptjs": "^3.0.3",
