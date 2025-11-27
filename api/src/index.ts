@@ -19,7 +19,10 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://seu-front.onrender.com"],
+    origin: [
+      "http://localhost:5173",
+      "https://hogwarts-escola-frontend.onrender.com",
+    ],
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: true,
   })
