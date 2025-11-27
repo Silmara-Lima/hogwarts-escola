@@ -19,15 +19,31 @@ import {
 } from "@mui/material";
 import { ZodError, z } from "zod";
 
-// Importa os tipos necessários (removi DisciplinaTurmaVinculo que não era usado)
 import type {
   ProfessorCreateData,
   DisciplinaMinistrada,
+  DisciplinaTurmaVinculo,
 } from "../../types/Professor";
 
-// -----------------------------
-// Departamentos (const + zod enum)
-// -----------------------------
+import {
+  createProfessor,
+  vincularDisciplinas,
+} from "../../services/ProfessorService";
+import { getDisciplinas } from "../../services/DisciplinaService";
+
+// =========================================================================
+// MOCK DE TURMAS
+// =========================================================================
+const MOCK_TURMAS = [
+  { id: 1, nome: "1º Ano" },
+  { id: 2, nome: "2º Ano" },
+  { id: 3, nome: "3º Ano" },
+  { id: 4, nome: "4º Ano" },
+];
+
+// =========================================================================
+// Departamentos
+// =========================================================================
 const DEPARTAMENTOS = [
   "Poções",
   "Transfiguração",
@@ -40,9 +56,9 @@ const DEPARTAMENTOS = [
 const departamentos = z.enum(DEPARTAMENTOS);
 type Departamento = z.infer<typeof departamentos>;
 
-// -----------------------------
-// Zod schema (validação do modal)
-// -----------------------------
+// =========================================================================
+// Schema Zod (validação)
+// =========================================================================
 const createProfessorSchema = z.object({
   nome: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
   email: z.string().email("Formato de e-mail inválido."),
@@ -54,14 +70,19 @@ const createProfessorSchema = z.object({
     .max(15, "Telefone muito longo."),
   cpf: z.string().regex(/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/, "CPF inválido."),
   matricula: z.string().min(3, "Matrícula é obrigatória."),
+  turmaId: z.number({ message: "A Turma é obrigatória." }),
+  disciplinasIds: z
+    .array(z.number())
+    .min(1, "Selecione pelo menos uma disciplina."),
 });
 
-// -----------------------------
-// Form types
-// -----------------------------
+// =========================================================================
+// Tipagem do Formulário
+// =========================================================================
 interface FormDataType extends Omit<ProfessorCreateData, "departamento"> {
   departamento: Departamento | "";
-  disciplinasIds: number[]; // ids selecionados
+  turmaId: number | "";
+  disciplinasIds: number[];
 }
 
 const initialFormData: FormDataType = {
@@ -73,25 +94,25 @@ const initialFormData: FormDataType = {
   cpf: "",
   matricula: "",
   disciplinasIds: [],
+  turmaId: "",
 };
 
-// -----------------------------
+// =========================================================================
 // Props do componente
-// -----------------------------
+// =========================================================================
 interface CriarProfessorModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (dados: ProfessorCreateData) => Promise<void>;
-  onSuccess: () => void;
+  onSuccess: () => Promise<void>;
 }
 
-// -----------------------------
+// =========================================================================
 // Componente
-// -----------------------------
+// =========================================================================
 export const CriarProfessorModal: React.FC<CriarProfessorModalProps> = ({
   open,
   onClose,
-  onSave,
   onSuccess,
 }) => {
   const [formData, setFormData] = useState<FormDataType>(initialFormData);
@@ -100,124 +121,75 @@ export const CriarProfessorModal: React.FC<CriarProfessorModalProps> = ({
   const [disciplinasDisponiveis, setDisciplinasDisponiveis] = useState<
     DisciplinaMinistrada[]
   >([]);
+  const [loadingDisciplinas, setLoadingDisciplinas] = useState(false);
 
-  // Carrega disciplinas (simulação - aqui você pode chamar API)
+  // =========================================================================
+  // Buscar disciplinas
+  // =========================================================================
   useEffect(() => {
     const fetchDisciplinas = async () => {
+      setLoadingDisciplinas(true);
       try {
-        // Substitua por chamada real ao serviço caso exista
-        const data: DisciplinaMinistrada[] = [
-          { id: 1, nome: "Poções I", turmas: [] },
-          { id: 2, nome: "Feitiços Avançados", turmas: [] },
-          { id: 3, nome: "História da Magia", turmas: [] },
-        ];
-        setDisciplinasDisponiveis(data);
+        const data = await getDisciplinas();
+        const disciplinasFormatadas: DisciplinaMinistrada[] = data.map((d) => ({
+          id: d.id,
+          nome: d.nome,
+          turmas: [],
+        }));
+        setDisciplinasDisponiveis(disciplinasFormatadas);
       } catch (err) {
         console.error("Erro ao buscar disciplinas:", err);
+        setErrors((prev) => ({
+          ...prev,
+          geral: "Falha ao carregar as disciplinas. Tente recarregar a página.",
+        }));
+      } finally {
+        setLoadingDisciplinas(false);
       }
     };
 
     if (open) fetchDisciplinas();
   }, [open]);
 
-  // -----------------------------
+  // =========================================================================
   // Handlers
-  // -----------------------------
-  // Text fields (nome, email, cpf, telefone, senha, matricula)
+  // =========================================================================
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev: FormDataType) => ({ ...prev, [name]: value }));
-    setErrors((prev: Record<string, string | undefined>) => ({
-      ...prev,
-      [name]: undefined,
-      geral: undefined,
-    }));
+    setErrors((prev) => ({ ...prev, [name]: undefined, geral: undefined }));
   };
 
-  // Departamento (single select)
   const handleDepartamentoChange = (e: SelectChangeEvent) => {
     const value = e.target.value as Departamento | "";
-    setFormData((prev: FormDataType) => ({ ...prev, departamento: value }));
-    setErrors((prev: Record<string, string | undefined>) => ({
+    setFormData((prev) => ({ ...prev, departamento: value }));
+    setErrors((prev) => ({
       ...prev,
       departamento: undefined,
       geral: undefined,
     }));
   };
 
-  // Disciplinas (multiple select) - MUI pode devolver string ou array, tratamos ambos
   const handleDisciplinasChange = (e: SelectChangeEvent<any>) => {
     const value = e.target.value;
     let disciplinaIds: number[] = [];
 
-    if (Array.isArray(value)) {
-      // Quando já é array
-      disciplinaIds = value.map((v) => Number(v));
-    } else if (typeof value === "string") {
-      // Quando vem como CSV string
-      disciplinaIds = value.split(",").map((s) => Number(s));
-    } else {
-      disciplinaIds = [];
-    }
+    if (Array.isArray(value)) disciplinaIds = value.map(Number);
+    else if (typeof value === "string")
+      disciplinaIds = value.split(",").map(Number);
 
-    setFormData((prev: FormDataType) => ({
-      ...prev,
-      disciplinasIds: disciplinaIds,
-    }));
-
-    setErrors((prev: Record<string, string | undefined>) => ({
+    setFormData((prev) => ({ ...prev, disciplinasIds: disciplinaIds }));
+    setErrors((prev) => ({
       ...prev,
       disciplinasIds: undefined,
       geral: undefined,
     }));
   };
 
-  // Submit
-  const handleSubmit = async () => {
-    setLoading(true);
-    setErrors({});
-
-    // prepare payload (exclui disciplinasIds, pois o backend pode receber de outra forma)
-    const { disciplinasIds, departamento, ...basicData } = formData;
-
-    const rawPayload: ProfessorCreateData = {
-      ...basicData,
-      departamento: departamento as Departamento,
-    };
-
-    try {
-      // validação zod
-      createProfessorSchema.parse(rawPayload);
-
-      // chama onSave (serviço que cria professor)
-      await onSave(rawPayload);
-
-      // sucesso: fecha modal e notifica pai
-      onClose();
-      onSuccess();
-    } catch (err) {
-      if (err instanceof ZodError) {
-        const fieldErrors: Record<string, string> = {};
-        err.issues.forEach((issue) => {
-          const key = issue.path[0] as string;
-          fieldErrors[key] = issue.message;
-        });
-        setErrors((prev) => ({ ...prev, ...fieldErrors }));
-        setErrors((prev) => ({
-          ...prev,
-          geral: "Por favor, corrija os erros de validação.",
-        }));
-      } else if (err instanceof Error) {
-        setErrors((prev) => ({ ...prev, geral: err.message }));
-      } else {
-        setErrors((prev) => ({
-          ...prev,
-          geral: "Erro desconhecido ao tentar criar o professor.",
-        }));
-      }
-    } finally {
-      setLoading(false);
-    }
+  const handleTurmaChange = (e: SelectChangeEvent) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, turmaId: Number(value) }));
+    setErrors((prev) => ({ ...prev, turmaId: undefined, geral: undefined }));
   };
 
   const handleModalClose = () => {
@@ -228,9 +200,70 @@ export const CriarProfessorModal: React.FC<CriarProfessorModalProps> = ({
     }
   };
 
-  // -----------------------------
+  // =========================================================================
+  // Submit (Fluxo em duas etapas)
+  // =========================================================================
+  const handleSubmit = async () => {
+    setLoading(true);
+    setErrors({});
+
+    const { disciplinasIds, turmaId, departamento, ...basicData } = formData;
+
+    const validationPayload = {
+      ...basicData,
+      departamento: departamento as Departamento,
+      turmaId: turmaId as number,
+      disciplinasIds,
+    };
+
+    const creationPayload: ProfessorCreateData = {
+      ...basicData,
+      departamento: departamento as Departamento,
+    };
+
+    try {
+      createProfessorSchema.parse(validationPayload);
+
+      const newProfessor = await createProfessor(creationPayload);
+      const professorId = newProfessor.id;
+
+      const vinculos: DisciplinaTurmaVinculo[] = disciplinasIds.map((dId) => ({
+        disciplinaId: dId,
+        turmaId: turmaId as number,
+      }));
+
+      await vincularDisciplinas(professorId, vinculos);
+
+      onClose();
+      onSuccess();
+    } catch (err) {
+      if (err instanceof ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        err.issues.forEach((issue) => {
+          const key = issue.path[0] as string;
+          fieldErrors[key] = issue.message;
+        });
+        setErrors((prev) => ({
+          ...prev,
+          ...fieldErrors,
+          geral: "Por favor, corrija os erros de validação.",
+        }));
+      } else {
+        console.error("Erro ao criar/vincular professor:", err);
+        const errorMessage =
+          (err as any)?.response?.data?.message ||
+          (err as Error).message ||
+          "Erro desconhecido ao tentar criar o professor.";
+        setErrors((prev) => ({ ...prev, geral: errorMessage }));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =========================================================================
   // Render
-  // -----------------------------
+  // =========================================================================
   return (
     <Dialog open={open} onClose={handleModalClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ color: "primary.main", fontWeight: 600 }}>
@@ -344,7 +377,38 @@ export const CriarProfessorModal: React.FC<CriarProfessorModalProps> = ({
               <FormHelperText>{errors.departamento || " "}</FormHelperText>
             </FormControl>
 
-            <FormControl fullWidth disabled={loading}>
+            <FormControl
+              fullWidth
+              required
+              disabled={loading}
+              error={!!errors.turmaId}
+            >
+              <InputLabel id="turma-label">Turma</InputLabel>
+              <Select
+                labelId="turma-label"
+                value={formData.turmaId.toString()}
+                onChange={handleTurmaChange}
+                label="Turma"
+              >
+                <MenuItem value="">
+                  <em>Nenhuma</em>
+                </MenuItem>
+                {MOCK_TURMAS.map((turma) => (
+                  <MenuItem key={turma.id} value={turma.id}>
+                    {turma.nome}
+                  </MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>{errors.turmaId || " "}</FormHelperText>
+            </FormControl>
+          </Box>
+
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <FormControl
+              fullWidth
+              error={!!errors.disciplinasIds}
+              disabled={loading || loadingDisciplinas}
+            >
               <InputLabel id="disciplinas-label">Disciplinas</InputLabel>
               <Select
                 labelId="disciplinas-label"
@@ -362,13 +426,20 @@ export const CriarProfessorModal: React.FC<CriarProfessorModalProps> = ({
                 )}
                 label="Disciplinas"
               >
-                {disciplinasDisponiveis.map((d) => (
-                  <MenuItem key={d.id} value={d.id}>
-                    {d.nome}
+                {loadingDisciplinas ? (
+                  <MenuItem disabled>
+                    <CircularProgress size={20} sx={{ mr: 1 }} /> Carregando
+                    Disciplinas...
                   </MenuItem>
-                ))}
+                ) : (
+                  disciplinasDisponiveis.map((d) => (
+                    <MenuItem key={d.id} value={d.id}>
+                      {d.nome}
+                    </MenuItem>
+                  ))
+                )}
               </Select>
-              <FormHelperText>&nbsp;</FormHelperText>
+              <FormHelperText>{errors.disciplinasIds || " "}</FormHelperText>
             </FormControl>
           </Box>
         </Box>

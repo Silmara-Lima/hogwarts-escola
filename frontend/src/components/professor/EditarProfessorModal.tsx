@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -14,24 +14,50 @@ import {
   Select,
   Chip,
   FormHelperText,
-  type SelectChangeEvent,
   Alert,
 } from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material";
 import { ZodError, z } from "zod";
 
-// Importa os tipos centralizados para evitar conflitos e duplicação
-import type {
-  ProfessorDetalhe,
-  DisciplinaTurmaVinculo,
-  DisciplinaMinistrada,
-} from "../../types/Professor";
+// ==============================================
+// MOCK DE DADOS / SERVIÇOS E CONSTANTES
+// ==============================================
 
-// Importe sua função de serviço aqui
-// import { getDisciplinas } from "../../services/DisciplinaService";
+// MOCK: Definição de Turmas
+const MOCK_TURMAS = [
+  { id: 1, nome: "1º Ano" },
+  { id: 2, nome: "2º Ano" },
+  { id: 3, nome: "3º Ano" },
+  { id: 4, nome: "4º Ano" },
+];
+
+// MOCK: Substitua pela sua chamada real ao backend
+const getDisciplinas = async (): Promise<DisciplinaMinistrada[]> => {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return [
+    { id: 1, nome: "Poções I", turmas: [] },
+    { id: 2, nome: "Feitiços Avançados", turmas: [] },
+    { id: 3, nome: "História da Magia", turmas: [] },
+    { id: 4, nome: "Herbologia", turmas: [] },
+    { id: 5, nome: "Astronomia", turmas: [] },
+    { id: 6, nome: "Aritmância", turmas: [] },
+  ];
+};
 
 // ==============================================
 // DEFINIÇÕES DE TIPOS E SCHEMA
 // ==============================================
+
+type DisciplinaMinistrada = {
+  id: number;
+  nome: string;
+  turmas: { id: number; nome: string }[];
+};
+
+type DisciplinaTurmaVinculo = {
+  disciplinaId: number;
+  turmaId: number;
+};
 
 const departamentos = z.enum([
   "Poções",
@@ -41,9 +67,28 @@ const departamentos = z.enum([
   "Defesa Contra as Artes das Trevas",
   "Estudos dos Trouxas",
 ]);
+
 type Departamento = z.infer<typeof departamentos>;
 
-const TURMA_PADRAO_ID = 1;
+type ProfessorDetalhe = {
+  id: number;
+  nome: string;
+  email: string;
+  departamento: string | null;
+  telefone: string | null;
+  cpf: string | null;
+  matricula: string | null;
+  disciplinasMinistradas: DisciplinaMinistrada[];
+};
+
+const updateDisciplinasSchema = z.object({
+  turmaId: z.number({
+    message: "A Turma é obrigatória para vincular disciplinas.",
+  }),
+  disciplinasIds: z
+    .array(z.number())
+    .min(1, { message: "Selecione pelo menos uma disciplina." }),
+});
 
 const updateProfessorSchema = z
   .object({
@@ -77,6 +122,7 @@ interface FormDataType {
   cpf: string;
   matricula: string;
   disciplinasIds: number[];
+  turmaId: number | "";
 }
 
 const initialEmptyState: FormDataType = {
@@ -88,6 +134,7 @@ const initialEmptyState: FormDataType = {
   cpf: "",
   matricula: "",
   disciplinasIds: [],
+  turmaId: "",
 };
 
 interface EditarProfessorModalProps {
@@ -102,55 +149,44 @@ interface EditarProfessorModalProps {
 }
 
 // ==============================================
-// COMPONENTE
+// COMPONENTE PRINCIPAL
 // ==============================================
-export const EditarProfessorModal = ({
+
+export const EditarProfessorModal: React.FC<EditarProfessorModalProps> = ({
   open,
   onClose,
   professor,
   onSave,
   onUpdateDisciplinas,
-}: EditarProfessorModalProps) => {
+}) => {
   const [formData, setFormData] = useState<FormDataType>(initialEmptyState);
   const [originalFormData, setOriginalFormData] = useState<FormDataType | null>(
     null
   );
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
-
-  // CORREÇÃO: Usando o tipo DisciplinaMinistrada[] importado
   const [disciplinasDisponiveis, setDisciplinasDisponiveis] = useState<
     DisciplinaMinistrada[]
   >([]);
+  const [loadingDisciplinas, setLoadingDisciplinas] = useState(false);
 
-  // ==============================================
-  // BUSCA DISCIPLINAS DO BACKEND
-  // ==============================================
+  // BUSCA DISCIPLINAS
   useEffect(() => {
-    // ATENÇÃO: A função getDisciplinas() precisa estar importada/definida e retornar Promise<DisciplinaMinistrada[]>
     const fetchDisciplinas = async () => {
+      setLoadingDisciplinas(true);
       try {
-        // Exemplo:
-        // const data: DisciplinaMinistrada[] = await getDisciplinas();
-
-        // Simulação de dados para evitar erro de referência, se 'getDisciplinas' não existir:
-        const data: DisciplinaMinistrada[] = [
-          { id: 1, nome: "Poções I", turmas: [] },
-          { id: 2, nome: "Feitiços Avançados", turmas: [] },
-          { id: 3, nome: "História da Magia", turmas: [] },
-        ];
-
+        const data = await getDisciplinas();
         setDisciplinasDisponiveis(data);
       } catch (err) {
         console.error("Erro ao buscar disciplinas:", err);
+      } finally {
+        setLoadingDisciplinas(false);
       }
     };
     fetchDisciplinas();
   }, []);
 
-  // ==============================================
-  // INICIALIZAÇÃO DO FORM
-  // ==============================================
+  // INICIALIZA FORM
   useEffect(() => {
     if (!open || !professor) {
       setFormData(initialEmptyState);
@@ -160,6 +196,7 @@ export const EditarProfessorModal = ({
     }
 
     const disciplinasIds = professor.disciplinasMinistradas.map((d) => d.id);
+    const turmaAtual = professor.disciplinasMinistradas[0]?.turmas[0]?.id ?? "";
 
     const initialData: FormDataType = {
       nome: professor.nome ?? "",
@@ -170,32 +207,42 @@ export const EditarProfessorModal = ({
       cpf: professor.cpf ?? "",
       matricula: professor.matricula ?? "",
       disciplinasIds,
+      turmaId: turmaAtual,
     };
 
     setFormData(initialData);
     setOriginalFormData(initialData);
   }, [open, professor]);
 
-  // ==============================================
-  // HANDLERS DE INPUT
-  // ==============================================
+  // HANDLERS --------------------------------------
+
   const handleInputChange = (
-    field: keyof FormDataType,
-    value: string | number
+    field: keyof Omit<FormDataType, "turmaId" | "disciplinasIds">,
+    value: string
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: undefined, geral: undefined }));
   };
 
-  const handleDisciplinasChange = (e: SelectChangeEvent<number[]>) => {
+  const handleTurmaChange = (e: SelectChangeEvent) => {
     const value = e.target.value;
     setFormData((prev) => ({
       ...prev,
-      disciplinasIds:
-        typeof value === "string"
-          ? value.split(",").map(Number)
-          : (value as number[]),
+      turmaId: value === "" ? "" : Number(value),
     }));
+    setErrors((prev) => ({ ...prev, turmaId: undefined, geral: undefined }));
+  };
+
+  const handleDisciplinasChange = (e: SelectChangeEvent<number[]>) => {
+    const value = e.target.value;
+    const newDisciplinasIds =
+      typeof value === "string" ? value.split(",").map(Number) : value;
+
+    setFormData((prev) => ({
+      ...prev,
+      disciplinasIds: newDisciplinasIds,
+    }));
+
     setErrors((prev) => ({
       ...prev,
       disciplinasIds: undefined,
@@ -203,36 +250,21 @@ export const EditarProfessorModal = ({
     }));
   };
 
-  const handleBlur = (field: keyof UpdateProfessorData) => {
-    try {
-      let valueToValidate: any = formData[field as keyof FormDataType];
-      if (["telefone", "departamento", "cpf", "matricula"].includes(field)) {
-        valueToValidate = valueToValidate === "" ? null : valueToValidate;
-      }
-      if (field === "senha" && valueToValidate === "") return;
-      if (valueToValidate === null) return;
-
-      updateProfessorSchema
-        .pick({ [field]: true })
-        .parse({ [field]: valueToValidate });
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    } catch (err) {
-      if (err instanceof ZodError) {
-        setErrors((prev) => ({ ...prev, [field]: err.issues[0].message }));
-      }
-    }
+  const handleBlur = (_field: keyof FormDataType) => {
+    // Você pode adicionar validação pontual aqui depois
   };
 
-  // ==============================================
-  // SUBMISSÃO
-  // ==============================================
+  // SUBMISSÃO -------------------------------------
+
   const handleSubmit = async () => {
     if (!professor || !originalFormData) return;
+
     setLoading(true);
     setErrors({});
 
     const {
       disciplinasIds: currentDisciplinasIds,
+      turmaId: currentTurmaId,
       senha,
       ...basicFormData
     } = formData;
@@ -243,20 +275,33 @@ export const EditarProfessorModal = ({
       cpf: basicFormData.cpf,
       matricula: basicFormData.matricula,
       departamento:
-        basicFormData.departamento === ""
-          ? null
-          : (basicFormData.departamento as Departamento),
+        basicFormData.departamento === "" ? null : basicFormData.departamento,
       telefone: basicFormData.telefone === "" ? null : basicFormData.telefone,
     };
+
     if (senha !== "") rawBasicPayload.senha = senha;
 
+    const originalDisciplinasIds = originalFormData.disciplinasIds;
+    const originalTurmaId = originalFormData.turmaId;
+
     let basicPayloadToSend: UpdateProfessorData = {};
+    let allValid = true;
+    let newFieldErrors: Record<string, string> = {};
+
     try {
       updateProfessorSchema.parse(rawBasicPayload);
+
+      updateDisciplinasSchema.parse({
+        turmaId: currentTurmaId,
+        disciplinasIds: currentDisciplinasIds,
+      });
+
       Object.entries(rawBasicPayload).forEach(([key, value]) => {
         const originalValue = originalFormData[key as keyof FormDataType];
-        const current = value === null ? "" : value;
-        const original = originalValue === null ? "" : originalValue;
+
+        const current = value ?? "";
+        const original = originalValue ?? "";
+
         if (key === "senha" && value) {
           basicPayloadToSend.senha = value as string;
         } else if (current !== original) {
@@ -265,25 +310,30 @@ export const EditarProfessorModal = ({
       });
     } catch (err) {
       if (err instanceof ZodError) {
-        const fieldErrors: Record<string, string> = {};
         err.issues.forEach((issue) => {
-          const key = issue.path[0] as string;
-          fieldErrors[key] = issue.message;
+          newFieldErrors[issue.path[0] as string] = issue.message;
         });
-        setErrors(fieldErrors);
-        setLoading(false);
-        return;
+        setErrors(newFieldErrors);
+        allValid = false;
+      } else {
+        setErrors({ geral: "Erro de validação desconhecido." });
+        allValid = false;
       }
-      setErrors({ geral: "Erro de validação desconhecido." });
+    }
+
+    if (!allValid) {
       setLoading(false);
       return;
     }
 
-    const originalDisciplinasIds = originalFormData.disciplinasIds || [];
-    const hasDisciplinaChanges =
+    const hasBasicChanges = Object.keys(basicPayloadToSend).length > 0;
+
+    const isTurmaChanged = currentTurmaId !== originalTurmaId;
+    const isDisciplinasChanged =
       JSON.stringify(currentDisciplinasIds.sort()) !==
       JSON.stringify(originalDisciplinasIds.sort());
-    const hasBasicChanges = Object.keys(basicPayloadToSend).length > 0;
+
+    const hasDisciplinaChanges = isTurmaChanged || isDisciplinasChanged;
 
     if (!hasBasicChanges && !hasDisciplinaChanges) {
       setErrors({ geral: "Nenhuma alteração detectada para salvar." });
@@ -292,21 +342,26 @@ export const EditarProfessorModal = ({
     }
 
     try {
-      if (hasBasicChanges) await onSave(professor.id, basicPayloadToSend);
+      if (hasBasicChanges) {
+        await onSave(professor.id, basicPayloadToSend);
+      }
 
       if (hasDisciplinaChanges) {
         const vinculosParaEnviar: DisciplinaTurmaVinculo[] =
           currentDisciplinasIds.map((discId) => ({
             disciplinaId: discId,
-            turmaId: TURMA_PADRAO_ID,
+            turmaId: currentTurmaId as number,
           }));
+
         await onUpdateDisciplinas(professor.id, vinculosParaEnviar);
       }
+
+      onClose();
     } catch (apiError: any) {
       const apiMsg =
+        apiError?.message ||
         apiError.response?.data?.message ||
-        apiError.message ||
-        "Erro ao salvar.";
+        "Erro ao salvar. Verifique o console.";
       setErrors({ geral: apiMsg });
     } finally {
       setLoading(false);
@@ -314,22 +369,28 @@ export const EditarProfessorModal = ({
   };
 
   const hasValidationErrors = Object.values(errors).some((err) => !!err);
-  const isSaveDisabled = loading || hasValidationErrors;
+
+  const isSaveDisabled =
+    loading ||
+    hasValidationErrors ||
+    !!errors.turmaId ||
+    !!errors.disciplinasIds;
 
   if (!professor) return null;
 
-  // ==============================================
-  // RENDERIZAÇÃO
-  // ==============================================
+  // RENDER ----------------------------------------
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ color: "primary.main", fontWeight: 600 }}>
         Editar Professor — {professor.nome} ✏️
       </DialogTitle>
+
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
           {errors.geral && <Alert severity="error">{errors.geral}</Alert>}
 
+          {/* Nome e Matrícula */}
           <Box sx={{ display: "flex", gap: 2 }}>
             <TextField
               label="Nome Completo"
@@ -342,6 +403,7 @@ export const EditarProfessorModal = ({
               required
               disabled={loading}
             />
+
             <TextField
               label="Matrícula"
               value={formData.matricula}
@@ -354,6 +416,7 @@ export const EditarProfessorModal = ({
             />
           </Box>
 
+          {/* CPF e Telefone */}
           <Box sx={{ display: "flex", gap: 2 }}>
             <TextField
               label="CPF"
@@ -365,6 +428,7 @@ export const EditarProfessorModal = ({
               fullWidth
               disabled={loading}
             />
+
             <TextField
               label="Telefone"
               value={formData.telefone}
@@ -377,6 +441,7 @@ export const EditarProfessorModal = ({
             />
           </Box>
 
+          {/* Email e Senha */}
           <Box sx={{ display: "flex", gap: 2 }}>
             <TextField
               label="Email"
@@ -390,6 +455,7 @@ export const EditarProfessorModal = ({
               required
               disabled={loading}
             />
+
             <TextField
               label="Nova Senha (opcional)"
               type="password"
@@ -406,6 +472,7 @@ export const EditarProfessorModal = ({
             />
           </Box>
 
+          {/* Departamento e Turma */}
           <Box sx={{ display: "flex", gap: 2 }}>
             <FormControl
               fullWidth
@@ -434,49 +501,83 @@ export const EditarProfessorModal = ({
               <FormHelperText>{errors.departamento || " "}</FormHelperText>
             </FormControl>
 
-            <FormControl fullWidth disabled={loading}>
-              <InputLabel>Disciplinas Ministradas</InputLabel>
+            {/* Turma */}
+            <FormControl
+              fullWidth
+              required
+              disabled={loading}
+              error={!!errors.turmaId}
+            >
+              <InputLabel id="turma-label">Turma</InputLabel>
               <Select
-                multiple
-                value={formData.disciplinasIds}
-                onChange={handleDisciplinasChange}
-                renderValue={(selected) => (
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                    {disciplinasDisponiveis
-                      .filter((d) => selected.includes(d.id))
-                      .map((d) => (
-                        <Chip key={d.id} label={d.nome} />
-                      ))}
-                  </Box>
-                )}
-                label="Disciplinas Ministradas"
+                labelId="turma-label"
+                value={formData.turmaId.toString()}
+                onChange={handleTurmaChange}
+                label="Turma"
               >
-                {disciplinasDisponiveis.map((d) => (
-                  <MenuItem key={d.id} value={d.id}>
-                    {d.nome}
+                <MenuItem value="">
+                  <em>Nenhuma</em>
+                </MenuItem>
+                {MOCK_TURMAS.map((turma) => (
+                  <MenuItem key={turma.id} value={turma.id}>
+                    {turma.nome}
                   </MenuItem>
                 ))}
               </Select>
-              <FormHelperText>&nbsp;</FormHelperText>
+              <FormHelperText>{errors.turmaId || " "}</FormHelperText>
             </FormControl>
           </Box>
+
+          {/* Disciplinas */}
+          <FormControl
+            fullWidth
+            disabled={loading || loadingDisciplinas}
+            error={!!errors.disciplinasIds}
+          >
+            <InputLabel>Disciplinas Ministradas</InputLabel>
+            <Select
+              multiple
+              value={formData.disciplinasIds}
+              onChange={handleDisciplinasChange}
+              renderValue={(selected) => (
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                  {disciplinasDisponiveis
+                    .filter((d) => selected.includes(d.id))
+                    .map((d) => (
+                      <Chip key={d.id} label={d.nome} />
+                    ))}
+                </Box>
+              )}
+              label="Disciplinas Ministradas"
+            >
+              {loadingDisciplinas ? (
+                <MenuItem disabled>
+                  <CircularProgress size={20} />
+                </MenuItem>
+              ) : (
+                disciplinasDisponiveis.map((disciplina) => (
+                  <MenuItem key={disciplina.id} value={disciplina.id}>
+                    {disciplina.nome}
+                  </MenuItem>
+                ))
+              )}
+            </Select>
+            <FormHelperText>{errors.disciplinasIds || " "}</FormHelperText>
+          </FormControl>
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2 }}>
-        <Button onClick={onClose} disabled={loading}>
+      <DialogActions>
+        <Button onClick={onClose} color="inherit" disabled={loading}>
           Cancelar
         </Button>
+
         <Button
           onClick={handleSubmit}
           variant="contained"
           disabled={isSaveDisabled}
         >
-          {loading ? (
-            <CircularProgress size={22} color="inherit" />
-          ) : (
-            "Salvar Alterações"
-          )}
+          {loading ? <CircularProgress size={20} /> : "Salvar Alterações"}
         </Button>
       </DialogActions>
     </Dialog>

@@ -18,17 +18,12 @@ import {
 } from "@mui/material";
 import { ZodError } from "zod";
 
-// Importe seus schemas e tipos
 import { createAlunoSchema } from "../../schemas/AlunoSchema";
 import type { CreateAlunoData } from "../../types/Alunos";
 import type { Turma, Casa } from "../../types/CasaeTurma";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { Dayjs } from "dayjs";
-
-// ⚠️ Se você está usando o código do Service logo acima, troque as funções simuladas
-// pelo import real, por exemplo:
-// import { getTurmas, getCasas } from "../../services/alunosService";
 
 // ==============================================
 // 1. TIPAGEM PARA O ESTADO DO FORMULÁRIO
@@ -41,7 +36,7 @@ interface AlunoFormDataType {
   cpf: string;
   telefone: string;
   curso?: string;
-  dataNascimento: Dayjs | null; // DD/MM/YYYY com máscara
+  dataNascimento: Dayjs | null;
   turmaId: number | null;
   casaId: number | null;
   turno: "MATUTINO" | "VESPERTINO" | "NOTURNO" | "";
@@ -55,7 +50,7 @@ const initialFormData: AlunoFormDataType = {
   cpf: "",
   telefone: "",
   curso: "",
-  dataNascimento: null, // DD/MM/YYYY
+  dataNascimento: null,
   turmaId: null,
   casaId: null,
   turno: "",
@@ -66,14 +61,13 @@ const initialFormData: AlunoFormDataType = {
 // ==============================================
 interface CriarAlunoModalProps {
   open: boolean;
-  onClose: () => void; // A prop onSave agora tem uma tipagem mais precisa (o retorno é um Promise<void> ou um Error)
+  onClose: () => void;
   onSave: (dados: CreateAlunoData) => Promise<void>;
   onSuccess: () => void;
 }
 
 // ==============================================
-// 3. UTILS SIMULADOS E FUNÇÕES DE DATA (COM MÁSCARA)
-// ⚠️ Estes MOCKs devem ser substituídos pelos imports reais do Service
+// 3. UTILS SIMULADOS
 // ==============================================
 const CURSOS_SIMULADOS_MOCK: Turma["curso"][] = [
   { id: 1, nome: "Poções" },
@@ -104,52 +98,8 @@ const CASAS_SIMULADAS: Casa[] = [
   { id: 4, nome: "Lufa-Lufa" },
 ];
 
-// ⚠️ Mantenha estas funções SIMULADAS ou COLOQUE O IMPORT REAL do Service
 const getTurmasSimulado = async (): Promise<Turma[]> => TURMAS_SIMULADAS;
 const getCasasSimulado = async (): Promise<Casa[]> => CASAS_SIMULADAS;
-
-/**
- * Aplica a máscara DD/MM/AAAA conforme o usuário digita.
- */
-
-/*
-const maskDate = (value: string): string => {
-  const digits = value.replace(/\D/g, "").slice(0, 8);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-};*/
-
-/**
- * Converte data DD/MM/AAAA para YYYY-MM-DD.
- */
-/*
-const convertBrazilToISO = (dateString: string): string | undefined => {
-  if (!dateString || dateString.length === 0) return undefined;
-
-  const digitsOnly = dateString.replace(/\D/g, "");
-
-  if (digitsOnly.length !== 8) return undefined; // Incompleta
-
-  const day = Number(digitsOnly.slice(0, 2));
-  const month = Number(digitsOnly.slice(2, 4));
-  const year = Number(digitsOnly.slice(4, 8)); // Validação básica de data (evita datas impossíveis como 31/02)
-
-  const dateObj = new Date(year, month - 1, day);
-  if (
-    dateObj.getFullYear() !== year ||
-    dateObj.getMonth() !== month - 1 ||
-    dateObj.getDate() !== day
-  ) {
-    return undefined; // Data inválida
-  }
-
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(
-    2,
-    "0"
-  )}`;
-};
-*/
 
 // ==============================================
 // 4. COMPONENTE PRINCIPAL
@@ -172,7 +122,6 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
       setErrors({});
       const loadData = async () => {
         try {
-          // ⚠️ Trocar para getTurmas() e getCasas() reais na sua aplicação
           const [turmaData, casaData] = await Promise.all([
             getTurmasSimulado(),
             getCasasSimulado(),
@@ -189,30 +138,22 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
       };
       loadData();
     }
-  }, [open]); // ============================================== // HANDLERS // ==============================================
+  }, [open]);
 
+  // ==============================================
+  // 5. HANDLERS
+  // ==============================================
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-
-    let finalValue = value;
-
-    //if (name === "dataNascimento") {
-    //  finalValue = maskDate(value);
-    //}
-
-    setFormData((prev: AlunoFormDataType) => ({ ...prev, [name]: finalValue }));
+    setFormData((prev: AlunoFormDataType) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: undefined, geral: undefined }));
   };
 
   const handleSelectChange = (e: SelectChangeEvent<string | number>) => {
     const { name, value } = e.target;
-
     let typedValue: string | number | null;
 
     if (name === "turmaId" || name === "casaId") {
-      // Converte a string de volta para number, ou null se for "".
-      // O `handleInputChange` envia `null` para o estado, que é necessário no `Select`
-      // para mostrar o item "Selecione..." quando o valor é "".
       typedValue = value === "" || value === null ? null : Number(value);
     } else {
       typedValue = value;
@@ -222,6 +163,7 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
       ...prev,
       [name as keyof AlunoFormDataType]: typedValue,
     }));
+
     setErrors((prev) => ({ ...prev, [name]: undefined, geral: undefined }));
   };
 
@@ -232,24 +174,21 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
       onClose();
     }
   };
+
   // ==============================================
-  // SUBMISSÃO (Fluxo de validação de dados) - CORRIGIDO
+  // 6. SUBMISSÃO (VALIDAÇÃO)
   // ==============================================
   const handleSubmit = async () => {
     setLoading(true);
     setErrors({});
 
     const rawData = { ...formData };
-    let dataToSend: string | undefined = undefined; // YYYY-MM-DD ou undefined
+    let dataToSend: string | undefined = undefined;
 
-    // 1. Converte a data do Dayjs para YYYY-MM-DD
     if (rawData.dataNascimento && rawData.dataNascimento.isValid()) {
       dataToSend = rawData.dataNascimento.format("YYYY-MM-DD");
     }
-    // Se for nula, undefined ou inválida, 'dataToSend' permanece undefined,
-    // e o Zod irá capturar a obrigatoriedade.
 
-    // 2. Prepara o objeto FINAL (payload)
     const payload: CreateAlunoData = {
       nome: rawData.nome,
       email: rawData.email,
@@ -257,11 +196,7 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
       matricula: rawData.matricula,
       cpf: rawData.cpf,
       telefone: rawData.telefone,
-
-      // 🔴 CAMPO CRÍTICO: Incluímos dataNascimento AQUI
       dataNascimento: dataToSend,
-
-      // Converte null/vazio para undefined para Zod, mas garante a tipagem
       turmaId: rawData.turmaId === null ? undefined : rawData.turmaId,
       turno:
         rawData.turno === ""
@@ -270,27 +205,19 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
       casaId: rawData.casaId === null ? undefined : rawData.casaId,
     } as CreateAlunoData;
 
-    // 🔴 DEBUG: Garante que a data está no objeto ANTES do Zod
     console.log(
       "PAYLOAD ANTES DO ZOD (FRONTEND):",
       JSON.stringify(payload, null, 2)
     );
 
     try {
-      // 3. Validação Zod
       createAlunoSchema.parse(payload);
-
       console.log("PAYLOAD VALIDADO PELO ZOD: OK");
 
-      // 4. Chamar o Serviço (O onSave utiliza o objeto 'payload' validado)
       await onSave(payload);
-      // ⚠️ Se a data sumir, a remoção está ocorrendo DENTRO da função 'onSave'
-
-      // 5. Sucesso
       onClose();
       onSuccess();
     } catch (err) {
-      // Tratamento de erros Zod e de API
       if (err instanceof ZodError) {
         const fieldErrors: Record<string, string> = {};
         err.issues.forEach((issue) => {
@@ -306,23 +233,23 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
     } finally {
       setLoading(false);
     }
-  }; // ============================================== // RENDERIZAÇÃO COMPLETA // ==============================================
+  };
 
+  // ==============================================
+  // 7. RENDERIZAÇÃO
+  // ==============================================
   return (
     <Dialog open={open} onClose={handleModalClose} maxWidth="sm" fullWidth>
-           {" "}
       <DialogTitle sx={{ color: "primary.main", fontWeight: 600 }}>
-                Novo Aluno 🧙‍♂️      {" "}
+        Novo Aluno 🧙‍♂️
       </DialogTitle>
-           {" "}
+
       <DialogContent>
-               {" "}
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
-                   {" "}
-          {errors.geral && <Alert severity="error">{errors.geral}</Alert>}     
-              {/* Nome e Matrícula */}         {" "}
+          {errors.geral && <Alert severity="error">{errors.geral}</Alert>}
+
+          {/* Nome e Matrícula */}
           <Box sx={{ display: "flex", gap: 2 }}>
-                       {" "}
             <TextField
               name="nome"
               label="Nome Completo"
@@ -334,7 +261,7 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
               required
               disabled={loading}
             />
-                       {" "}
+
             <TextField
               name="matricula"
               label="Matrícula"
@@ -346,11 +273,10 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
               required
               disabled={loading}
             />
-                     {" "}
           </Box>
-                    {/* CPF e Telefone */}         {" "}
+
+          {/* CPF e Telefone */}
           <Box sx={{ display: "flex", gap: 2 }}>
-                       {" "}
             <TextField
               name="cpf"
               label="CPF"
@@ -362,7 +288,7 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
               required
               disabled={loading}
             />
-                       {" "}
+
             <TextField
               name="telefone"
               label="Telefone"
@@ -374,11 +300,10 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
               required
               disabled={loading}
             />
-                     {" "}
           </Box>
-                    {/* Email e Senha */}         {" "}
+
+          {/* Email e Senha */}
           <Box sx={{ display: "flex", gap: 2 }}>
-                       {" "}
             <TextField
               name="email"
               label="Email"
@@ -391,7 +316,7 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
               required
               disabled={loading}
             />
-                       {" "}
+
             <TextField
               name="senha"
               label="Senha Inicial"
@@ -404,11 +329,10 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
               required
               disabled={loading}
             />
-                     {" "}
           </Box>
-                    {/* Curso e Data de Nascimento - CAMPO CRÍTICO */}         {" "}
+
+          {/* Curso e Data de Nascimento */}
           <Box sx={{ display: "flex", gap: 2 }}>
-                       {" "}
             <TextField
               name="curso"
               label="Curso"
@@ -420,13 +344,16 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
               required
               disabled={loading}
             />
-                       {" "}
+
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <DatePicker
                 label="Nascimento"
                 value={formData.dataNascimento}
                 onChange={(newValue) =>
-                  setFormData((prev) => ({ ...prev, dataNascimento: newValue }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    dataNascimento: newValue,
+                  }))
                 }
                 slotProps={{
                   textField: {
@@ -440,19 +367,17 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
                 format="DD/MM/YYYY"
               />
             </LocalizationProvider>
-                     {" "}
           </Box>
-                    {/* Turma, Turno e Casa */}         {" "}
+
+          {/* Turma, Turno e Casa */}
           <Box sx={{ display: "flex", gap: 2 }}>
-                        {/* Turma */}           {" "}
             <FormControl
               fullWidth
               required
               disabled={loading}
               error={!!errors.turmaId}
             >
-                            <InputLabel id="turma-label">Turma</InputLabel>     
-                     {" "}
+              <InputLabel id="turma-label">Turma</InputLabel>
               <Select
                 labelId="turma-label"
                 name="turmaId"
@@ -460,31 +385,27 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
                 onChange={handleSelectChange}
                 label="Turma"
               >
-                               {" "}
                 <MenuItem value="">
-                                    <em>Selecione a Turma</em>               {" "}
+                  <em>Selecione a Turma</em>
                 </MenuItem>
-                               {" "}
+
                 {turmas.map((t) => (
                   <MenuItem key={t.id} value={t.id}>
-                                        {t.serie} - {t.turno}                 {" "}
+                    {t.serie} - {t.turno}
                   </MenuItem>
                 ))}
-                             {" "}
               </Select>
-                           {" "}
-              <FormHelperText>{errors.turmaId || " "}</FormHelperText>         
-               {" "}
+
+              <FormHelperText>{errors.turmaId || " "}</FormHelperText>
             </FormControl>
-                        {/* Turno */}           {" "}
+
             <FormControl
               fullWidth
               required
               disabled={loading}
               error={!!errors.turno}
             >
-                            <InputLabel id="turno-label">Turno</InputLabel>     
-                     {" "}
+              <InputLabel id="turno-label">Turno</InputLabel>
               <Select
                 labelId="turno-label"
                 name="turno"
@@ -492,22 +413,20 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
                 onChange={handleSelectChange}
                 label="Turno"
               >
-                               {" "}
                 <MenuItem value="">
-                                    <em>Selecione o Turno</em>               {" "}
+                  <em>Selecione o Turno</em>
                 </MenuItem>
-                                <MenuItem value="MATUTINO">Matutino</MenuItem> 
-                              <MenuItem value="VESPERTINO">Vespertino</MenuItem>
-                                <MenuItem value="NOTURNO">Noturno</MenuItem>   
-                         {" "}
+                <MenuItem value="MATUTINO">Matutino</MenuItem>
+                <MenuItem value="VESPERTINO">Vespertino</MenuItem>
+                <MenuItem value="NOTURNO">Noturno</MenuItem>
               </Select>
-                           {" "}
-              <FormHelperText>{errors.turno || " "}</FormHelperText>           {" "}
+
+              <FormHelperText>{errors.turno || " "}</FormHelperText>
             </FormControl>
-                        {/* Casa (Opcional) */}           {" "}
+
             <FormControl fullWidth disabled={loading} error={!!errors.casaId}>
-                            <InputLabel id="casa-label">Casa</InputLabel>       
-                   {" "}
+              <InputLabel id="casa-label">Casa</InputLabel>
+
               <Select
                 labelId="casa-label"
                 name="casaId"
@@ -515,50 +434,40 @@ export const CriarAlunoModal: React.FC<CriarAlunoModalProps> = ({
                 onChange={handleSelectChange}
                 label="Casa"
               >
-                               {" "}
                 <MenuItem value="">
-                                    <em>Nenhuma</em>               {" "}
+                  <em>Nenhuma</em>
                 </MenuItem>
-                               {" "}
+
                 {casas.map((c) => (
                   <MenuItem key={c.id} value={c.id}>
-                                        {c.nome}                 {" "}
+                    {c.nome}
                   </MenuItem>
                 ))}
-                             {" "}
               </Select>
-                           {" "}
-              <FormHelperText>{errors.casaId || " "}</FormHelperText>           {" "}
+
+              <FormHelperText>{errors.casaId || " "}</FormHelperText>
             </FormControl>
-                     {" "}
           </Box>
-                 {" "}
         </Box>
-             {" "}
       </DialogContent>
-           {" "}
+
       <DialogActions sx={{ p: 2 }}>
-               {" "}
         <Button onClick={handleModalClose} disabled={loading}>
-                    Cancelar        {" "}
+          Cancelar
         </Button>
-               {" "}
+
         <Button
           onClick={handleSubmit}
           variant="contained"
           disabled={loading || !!errors.geral}
         >
-                   {" "}
           {loading ? (
             <CircularProgress size={22} color="inherit" />
           ) : (
             "Criar Aluno"
           )}
-                 {" "}
         </Button>
-             {" "}
       </DialogActions>
-         {" "}
     </Dialog>
   );
 };

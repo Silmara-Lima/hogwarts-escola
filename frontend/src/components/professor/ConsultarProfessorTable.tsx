@@ -39,6 +39,7 @@ export const ProfessoresTable = ({
     "Email",
     "Telefone",
     "Departamento",
+    "Disciplinas",
     "Ações",
   ];
 

@@ -77,22 +77,17 @@ export const SecretarioProfessoresPage: React.FC = () => {
   const [professorEditando, setProfessorEditando] =
     useState<ProfessorDetalhe | null>(null);
 
-  // -----------------------
-  // CARREGAR PROFESSORES
-  // -----------------------
+  // ----------------------- CARREGAR PROFESSORES -----------------------
   const carregarProfessores = useCallback(async () => {
     setLoading(true);
     try {
-      // 1) busca a lista pública (sem CPF/telefone)
       const listaPublica = await getProfessores();
 
-      // 2) para cada professor, busca detalhes completos (cpf/telefone/disciplinas)
       const listaCompletaPromises = listaPublica.map(async (p) => {
         try {
           const details = await getProfessorDetails(p.id);
           return details;
         } catch (e) {
-          // se falhar para um item, ignoramos (log)
           console.error(`Erro buscando detalhes do professor ${p.id}`, e);
           return null;
         }
@@ -119,9 +114,7 @@ export const SecretarioProfessoresPage: React.FC = () => {
     carregarProfessores();
   }, [carregarProfessores]);
 
-  // -----------------------
-  // DELETE
-  // -----------------------
+  // ----------------------- DELETE -----------------------
   const handleDeleteConfirm = (id: number) => setConfirmDeleteId(id);
 
   const handleDelete = async () => {
@@ -141,6 +134,7 @@ export const SecretarioProfessoresPage: React.FC = () => {
       });
     } catch (error: any) {
       console.error("Erro ao deletar professor:", error);
+
       const msg =
         error?.response?.data?.message || "Erro ao deletar professor.";
 
@@ -155,9 +149,7 @@ export const SecretarioProfessoresPage: React.FC = () => {
     }
   };
 
-  // -----------------------
-  // EDITAR
-  // -----------------------
+  // ----------------------- EDITAR -----------------------
   const handleOpenEdit = (prof: ProfessorDetalhe) =>
     setProfessorEditando({ ...prof });
 
@@ -173,28 +165,24 @@ export const SecretarioProfessoresPage: React.FC = () => {
 
         setSnackbar({
           open: true,
-          message: "Dados atualizados com sucesso!",
+          message: "Dados básicos atualizados!",
           severity: "success",
         });
 
-        // Recarrega só o item alterado (mais eficiente que reload total)
         try {
           const updated = await getProfessorDetails(professorId);
           setProfessores((prev) =>
             prev.map((p) => (p.id === professorId ? updated : p))
           );
-        } catch (e) {
-          // se não conseguiu buscar o detalhe atualizado, faz reload completo
-          console.warn(
-            "Falha em carregar detalhe atualizado, recarregando lista."
-          );
+        } catch {
           await carregarProfessores();
         }
       }
     } catch (e: any) {
-      console.error("Erro ao salvar edição:", e);
+      console.error("Erro ao salvar dados básicos:", e);
       throw new Error(
-        e?.response?.data?.message || "Erro ao salvar alteração."
+        e?.response?.data?.message ||
+          "Erro ao salvar alteração dos dados básicos."
       );
     }
   };
@@ -206,7 +194,6 @@ export const SecretarioProfessoresPage: React.FC = () => {
     try {
       await vincularDisciplinas(professorId, vinculos);
 
-      // Recarrega apenas o professor atualizado
       const updated = await getProfessorDetails(professorId);
       setProfessores((prev) =>
         prev.map((p) => (p.id === professorId ? updated : p))
@@ -214,23 +201,18 @@ export const SecretarioProfessoresPage: React.FC = () => {
 
       setSnackbar({
         open: true,
-        message: "Disciplinas atualizadas!",
+        message: "Disciplinas e Turma atualizadas!",
         severity: "success",
       });
-
-      // fecha modal
-      handleCloseEdit();
     } catch (e: any) {
       console.error("Erro ao atualizar disciplinas:", e);
       throw new Error(
-        e?.response?.data?.message || "Erro ao atualizar disciplinas."
+        e?.response?.data?.message || "Erro ao atualizar disciplinas/turma."
       );
     }
   };
 
-  // -----------------------
-  // CREATE
-  // -----------------------
+  // ----------------------- CREATE -----------------------
   const handleCreateSave = async (dados: CreateProfessorData) => {
     try {
       await createProfessor(dados);
@@ -244,11 +226,12 @@ export const SecretarioProfessoresPage: React.FC = () => {
       });
     } catch (error: any) {
       console.error("Erro ao criar professor:", error);
+
       let errorMessage =
         error?.response?.data?.message ||
         error.message ||
         "Erro ao criar professor";
-      // Prisma unique constraint
+
       if (error?.code === "P2002" || error?.response?.data?.code === "P2002") {
         const target =
           error?.meta?.target || error?.response?.data?.meta?.target;
@@ -263,14 +246,11 @@ export const SecretarioProfessoresPage: React.FC = () => {
         severity: "error",
       });
 
-      // rethrow para modal tratar (se o modal espera)
       throw new Error(errorMessage);
     }
   };
 
-  // -----------------------
-  // FILTRO (SEARCH)
-  // -----------------------
+  // ----------------------- FILTRO (SEARCH) -----------------------
   const professoresFiltrados = useMemo(() => {
     if (!debouncedTerm.trim()) return professores;
     const term = debouncedTerm.toLowerCase();
@@ -289,9 +269,7 @@ export const SecretarioProfessoresPage: React.FC = () => {
     );
   }, [professores, debouncedTerm]);
 
-  // -----------------------
-  // RENDER
-  // -----------------------
+  // ----------------------- RENDER -----------------------
   return (
     <Box
       display="flex"
@@ -414,14 +392,16 @@ export const SecretarioProfessoresPage: React.FC = () => {
                     <TableCell>{prof.matricula}</TableCell>
                     <TableCell>{prof.email}</TableCell>
                     <TableCell>{prof.departamento || "-"}</TableCell>
+
                     <TableCell>
                       {prof.disciplinasMinistradas &&
                       prof.disciplinasMinistradas.length > 0
                         ? prof.disciplinasMinistradas
                             ?.map((d: { nome: string }) => d.nome)
-                            .join(", ") || ""
+                            .join(", ")
                         : "Nenhuma"}
                     </TableCell>
+
                     <TableCell align="center">
                       <IconButton
                         color="primary"
@@ -430,6 +410,7 @@ export const SecretarioProfessoresPage: React.FC = () => {
                       >
                         <EditIcon />
                       </IconButton>
+
                       <IconButton
                         color="error"
                         onClick={() => handleDeleteConfirm(prof.id)}
@@ -507,6 +488,7 @@ export const SecretarioProfessoresPage: React.FC = () => {
           >
             Cancelar
           </Button>
+
           <Button onClick={handleDelete} color="error" disabled={!!deletingId}>
             {deletingId ? "Excluindo..." : "Excluir"}
           </Button>

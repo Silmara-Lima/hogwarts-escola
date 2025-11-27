@@ -39,7 +39,7 @@ export interface ProfessorUpdateData {
 // =========================================================================
 export interface Turma {
   id: number;
-  serie: string;
+  nome: string;
   turno: "Matutino" | "Vespertino" | "Noturno";
 }
 

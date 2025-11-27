@@ -17,9 +17,9 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import dayjs, { Dayjs } from "dayjs";
 import "dayjs/locale/pt-br";
 
-// ==============================================
-// 🎯 DEFINIÇÕES DE TIPOS E SCHEMA
-// ==============================================
+// =========================================================================
+// TIPOS E SCHEMAS
+// =========================================================================
 
 const turnos = z.enum(["MATUTINO", "VESPERTINO", "NOTURNO"]);
 type Turno = z.infer<typeof turnos>;
@@ -31,7 +31,7 @@ const updateAlunoSchema = z
     email: z.string().email().optional(),
     dataNascimento: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/) // Espera YYYY-MM-DD
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
       .nullable()
       .optional(),
     cpf: z.string().max(14).nullable().optional(),
@@ -52,7 +52,7 @@ export interface AlunoPropType {
   nome: string;
   matricula: string;
   email: string;
-  dataNascimento: string; // Vindo do Backend (YYYY-MM-DD)
+  dataNascimento: string;
   turno: Turno | null | string;
   cpf: string | null | undefined;
   telefone: string | null | undefined;
@@ -67,26 +67,24 @@ export interface AlunoPropType {
   } | null;
 }
 
-// ==============================================
-// MOCK DE SERVIÇO DE ATUALIZAÇÃO
-// ==============================================
+// =========================================================================
+// MOCK DE SERVIÇO
+// =========================================================================
 
 const updateAluno = (id: number, data: UpdateAlunoData) => {
-  // Use 'data' diretamente!
   console.log(`MOCK API: Atualizando Aluno ${id}`, data);
 
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      // Retorna o objeto completo para simular o sucesso
       if (Math.random() > 0.1) resolve({ id, ...data, isMock: true });
       else reject(new Error("Erro simulado do servidor"));
     }, 800);
   });
 };
 
-// ==============================================
+// =========================================================================
 // TIPOS DO FORMULÁRIO
-// ==============================================
+// =========================================================================
 
 interface FormDataType {
   nome: string;
@@ -95,7 +93,7 @@ interface FormDataType {
   turno: Turno | "";
   casaId: number | "";
   turmaId: number | "";
-  dataNascimento: Dayjs | null; // 💡 Dayjs para o DatePicker
+  dataNascimento: Dayjs | null;
   telefone: string;
   cpf: string;
 }
@@ -112,9 +110,9 @@ const initialEmptyState: FormDataType = {
   cpf: "",
 };
 
-// ==============================================
+// =========================================================================
 // COMPONENTE
-// ==============================================
+// =========================================================================
 
 interface EditarAlunoModalProps {
   open: boolean;
@@ -137,10 +135,13 @@ export const EditarAlunoModal = ({
   const [casas, setCasas] = useState<Casa[]>([]);
   const [turmas, setTurmas] = useState<Turma[]>([]);
 
+  // =========================================================================
+  // LOAD DE DADOS
+  // =========================================================================
+
   const loadData = async () => {
     setLoadingData(true);
     try {
-      // ⚠️ Substitua por chamadas de API reais
       setCasas([
         { id: 1, nome: "Grifinória" },
         { id: 2, nome: "Sonserina" },
@@ -158,6 +159,10 @@ export const EditarAlunoModal = ({
     }
   };
 
+  // =========================================================================
+  // INICIALIZAÇÃO DO FORMULÁRIO
+  // =========================================================================
+
   useEffect(() => {
     if (!open || !aluno) {
       setFormData(initialEmptyState);
@@ -165,13 +170,13 @@ export const EditarAlunoModal = ({
       setTouched({});
       return;
     }
+
     const cpfValue = aluno.cpf ?? "";
     const telefoneValue = aluno.telefone ?? "";
     const casaIdValue = aluno.casaId ? Number(aluno.casaId) : "";
     const turmaIdValue = aluno.turmaId ? Number(aluno.turmaId) : "";
     const turnoValue = aluno.turno ?? "";
 
-    // 💡 Ajuste de inicialização: Verifica se a string não está vazia.
     const dataNascimentoValue =
       aluno.dataNascimento && aluno.dataNascimento.length > 0
         ? dayjs(aluno.dataNascimento)
@@ -192,6 +197,10 @@ export const EditarAlunoModal = ({
     loadData();
   }, [open, aluno]);
 
+  // =========================================================================
+  // HANDLES
+  // =========================================================================
+
   const handleInputChange = (
     field: keyof FormDataType,
     value: string | number | Dayjs | null
@@ -206,7 +215,6 @@ export const EditarAlunoModal = ({
           : value,
     }));
 
-    // Dispara a validação no change para data, ajudando na estabilidade
     if (touched[field as keyof UpdateAlunoData] || field === "dataNascimento")
       handleBlur(field as keyof UpdateAlunoData);
   };
@@ -217,16 +225,11 @@ export const EditarAlunoModal = ({
       let valueToValidate: any = formData[field as keyof FormDataType];
 
       if (field === "dataNascimento") {
-        // 💡 CORREÇÃO: Checa se o objeto Dayjs é válido.
         if (dayjs.isDayjs(valueToValidate) && valueToValidate.isValid()) {
-          // Se for Dayjs VÁLIDO, formata para a string YYYY-MM-DD que o Zod espera
           valueToValidate = valueToValidate.format("YYYY-MM-DD");
         } else if (valueToValidate === null || valueToValidate === "") {
-          // Se for NULO ou VAZIO, trata como undefined (opcional)
           valueToValidate = undefined;
         } else {
-          // Se for um objeto Dayjs INVÁLIDO (ocorre ao digitar incorretamente)
-          // Força uma string que falhará no regex Zod, mas garantindo que o Zod pegue o erro.
           valueToValidate = "DATA_INVALIDA_PARA_FORMATO";
         }
       }
@@ -244,60 +247,48 @@ export const EditarAlunoModal = ({
     } catch (err) {
       if (err instanceof ZodError)
         setErrors((prev) => ({ ...prev, [field]: err.issues[0].message }));
-      else console.error(err);
     }
   };
+
+  // =========================================================================
+  // SUBMIT
+  // =========================================================================
 
   const handleSubmit = async () => {
     setLoading(true);
     setErrors({});
 
-    // 1. CONVERSÃO: Converte o valor Dayjs atual para a string YYYY-MM-DD ou null.
-    // Usamos 'null' para representar a ausência/limpeza do campo.
     const novoDataNascimento =
       formData.dataNascimento && formData.dataNascimento.isValid()
         ? formData.dataNascimento.format("YYYY-MM-DD")
         : null;
 
-    // 2. VALOR ORIGINAL: Obtém o valor original do aluno no mesmo formato (string ou null/vazio).
-    // O aluno!.dataNascimento é a string YYYY-MM-DD que veio do backend.
     const originalDataNascimento = aluno!.dataNascimento || null;
 
-    // 3. CONSTRUÇÃO DO rawPayload (Sem dataNascimento inicialmente)
     const rawPayload: UpdateAlunoData = {
       nome: formData.nome || undefined,
       matricula: formData.matricula || undefined,
       email: formData.email || undefined,
-
-      // Campos que aceitam null no backend, mas são string/number no formulário
       telefone: formData.telefone === "" ? null : formData.telefone,
       cpf: formData.cpf === "" ? null : formData.cpf,
       casaId: formData.casaId === "" ? null : Number(formData.casaId),
-
-      // Campos que são undefined se vazios
       turno: formData.turno === "" ? undefined : (formData.turno as Turno),
       turmaId: formData.turmaId === "" ? undefined : Number(formData.turmaId),
     };
 
-    // 4. LÓGICA DE DETECÇÃO DE MUDANÇA PARA dataNascimento
-    // Se o valor novo for diferente do valor original (mudança ou remoção), inclui no payload.
     if (novoDataNascimento !== originalDataNascimento) {
-      // Se mudou, enviamos o novo valor (YYYY-MM-DD ou null para apagar).
       rawPayload.dataNascimento = novoDataNascimento;
     }
 
-    // 5. FILTRAGEM: Remove todos os campos que são 'undefined' (que não foram alterados).
     const payload = Object.fromEntries(
       Object.entries(rawPayload).filter(([, v]) => v !== undefined)
     ) as UpdateAlunoData;
 
-    // 🔴 DEBUG: Verifique se a data está aqui SE tiver sido alterada!
     console.log(
       "PAYLOAD FINAL ENVIADO PARA API (EDIT):",
       JSON.stringify(payload, null, 2)
     );
 
-    // 6. VERIFICAÇÃO FINAL: Se o payload está vazio, não há nada para salvar.
     if (Object.keys(payload).length === 0) {
       setErrors({ geral: "Nenhuma alteração detectada para salvar." });
       setLoading(false);
@@ -305,16 +296,11 @@ export const EditarAlunoModal = ({
     }
 
     try {
-      // 7. Validação Zod
-      // O Zod valida apenas os campos presentes no payload (que são os alterados)
       updateAlunoSchema.parse(payload);
-
-      // 8. Chamar o Serviço
       const atualizado = await updateAluno(aluno!.id, payload);
       onSave(atualizado);
       onClose();
     } catch (err) {
-      // Tratamento de erros
       if (err instanceof ZodError) {
         const fieldErrors: Record<string, string> = {};
         err.issues.forEach((issue) => {
@@ -322,7 +308,6 @@ export const EditarAlunoModal = ({
         });
         setErrors(fieldErrors);
       } else {
-        console.error(err);
         setErrors({
           geral: "Erro ao salvar: Verifique os dados e tente novamente.",
         });
@@ -331,6 +316,10 @@ export const EditarAlunoModal = ({
       setLoading(false);
     }
   };
+
+  // =========================================================================
+  // RENDER
+  // =========================================================================
 
   if (!aluno) return null;
 
@@ -361,7 +350,7 @@ export const EditarAlunoModal = ({
                   {errors.geral}
                 </Box>
               )}
-              {/* Nome e Email */}
+
               <Box sx={{ display: "flex", gap: 2 }}>
                 <TextField
                   label="Nome"
@@ -384,7 +373,7 @@ export const EditarAlunoModal = ({
                   disabled={loading}
                 />
               </Box>
-              {/* Matrícula e Data de Nascimento */}
+
               <Box sx={{ display: "flex", gap: 2 }}>
                 <TextField
                   label="Matrícula"
@@ -398,7 +387,6 @@ export const EditarAlunoModal = ({
                   fullWidth
                   disabled={loading}
                 />
-                {/* DataPicker */}
                 <DatePicker
                   label="Nascimento"
                   format="DD/MM/YYYY"
@@ -418,7 +406,6 @@ export const EditarAlunoModal = ({
                 />
               </Box>
 
-              {/* CPF e Telefone */}
               <Box sx={{ display: "flex", gap: 2 }}>
                 <TextField
                   label="CPF"
@@ -444,9 +431,7 @@ export const EditarAlunoModal = ({
                 />
               </Box>
 
-              {/* Turno, Casa e Turma */}
               <Box sx={{ display: "flex", gap: 2 }}>
-                {/* Turno */}
                 <TextField
                   select
                   label="Turno"
@@ -468,7 +453,6 @@ export const EditarAlunoModal = ({
                   ))}
                 </TextField>
 
-                {/* Casa */}
                 <TextField
                   select
                   label="Casa"
@@ -490,7 +474,6 @@ export const EditarAlunoModal = ({
                   ))}
                 </TextField>
 
-                {/* Turma */}
                 <TextField
                   select
                   label="Turma"
@@ -515,6 +498,7 @@ export const EditarAlunoModal = ({
             </Box>
           )}
         </DialogContent>
+
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={onClose} disabled={loading}>
             Cancelar

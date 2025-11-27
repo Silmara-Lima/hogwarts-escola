@@ -1,4 +1,3 @@
-// ARQUIVO: ../components/aluno/ConsultarAlunoTable.tsx
 // =========================================================================
 // NORMALIZAÇÃO DE ALUNO
 // =========================================================================
@@ -16,20 +15,19 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import type { AlunoFrontEnd as Aluno } from "../../types/Alunos"; // Assumindo que você usa AlunoFrontEnd
+import type { AlunoFrontEnd as Aluno } from "../../types/Alunos";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale/pt-BR";
 
 interface AlunosTableProps {
-  alunos: Aluno[]; // O array de alunos JÁ VEM FILTRADO do componente pai
+  alunos: Aluno[];
   deletingId: number | null;
   onDelete: (id: number) => void;
   onEdit: (aluno: Aluno) => void;
   loading: boolean;
-  searchQuery?: string; // Mantido, mas não usado para filtrar
+  searchQuery?: string;
 }
 
-// ⚠️ MANTIDO: Função para mapear/normalizar o objeto Aluno para garantir a exibição
 const normalizarAluno = (raw: any): Aluno => {
   const origem = raw.aluno || raw.data || raw;
   return {
@@ -37,14 +35,14 @@ const normalizarAluno = (raw: any): Aluno => {
     nome: origem.nome || origem.nomeCompleto || "Sem nome",
     matricula: origem.matricula ?? "",
     dataNascimento: origem.dataNascimento ?? null,
-    cpf: origem.cpf || (origem.aluno?.cpf ?? origem.data?.cpf) || "N/A",
+    cpf: origem.cpf || origem.aluno?.cpf || origem.data?.cpf || "N/A",
     telefone:
       origem.telefone ||
-      (origem.aluno?.telefone ?? origem.data?.telefone) ||
+      origem.aluno?.telefone ||
+      origem.data?.telefone ||
       "N/A",
     email: origem.email ?? "",
     turno: origem.turno ?? "N/A",
-    // Os objetos casa e turma já devem vir do AlunoFrontEnd no formato correto
     casa: origem.casa ? { id: origem.casa.id, nome: origem.casa.nome } : null,
     turma: origem.turma
       ? {
@@ -61,15 +59,11 @@ const normalizarAluno = (raw: any): Aluno => {
 // =========================================================================
 const formatarDataCorreta = (dataStr: string | null | undefined) => {
   if (!dataStr || dataStr.trim() === "") return "N/A";
-
-  // Se já veio no formato DD/MM/AAAA (vindo do mapAlunoFromBackend), retorna
   if (dataStr.includes("/")) return dataStr;
 
-  // Se veio no formato ISO (YYYY-MM-DD), faz a conversão
   const parts = dataStr.split("-").map(Number);
   if (parts.length < 3) return "Data Inválida";
 
-  // Usamos o construtor Date(ano, mês-1, dia) para evitar problemas de fuso
   const date = new Date(parts[0], parts[1] - 1, parts[2]);
   if (isNaN(date.getTime())) return "Data Inválida";
 
@@ -80,14 +74,12 @@ const formatarDataCorreta = (dataStr: string | null | undefined) => {
 // COMPONENTE DA TABELA
 // =========================================================================
 export const AlunosTable = ({
-  alunos, // JÁ FILTRADO
+  alunos,
   deletingId,
   onDelete,
   onEdit,
   loading,
 }: AlunosTableProps) => {
-  // 🟢 CORREÇÃO: Usamos os alunos recebidos (que já foram filtrados no pai)
-  // e apenas aplicamos a normalização.
   const alunosParaRenderizar = alunos.map(normalizarAluno);
 
   const colunas: string[] = [

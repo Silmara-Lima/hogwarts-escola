@@ -321,7 +321,7 @@ export const ProfessorPage = () => {
                         }
                         secondary={
                           <span style={{ color: ACCENT_DOURO_SUAVE }}>
-                            Turmas: {d.turmas.map((t) => t.serie).join(", ")} |
+                            Turmas: {d.turmas.map((t) => t.nome).join(", ")} |
                             Turnos: {d.turmas.map((t) => t.turno).join(", ")}
                           </span>
                         }
