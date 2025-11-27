@@ -48,7 +48,7 @@ import type {
   ProfessorCreateData,
   ProfessorUpdateData,
   DisciplinaTurmaVinculo,
-} from "../services/ProfessorService";
+} from "../types/Professor";
 
 import { useDebounce } from "../hooks/useDebounce";
 
@@ -418,8 +418,8 @@ export const SecretarioProfessoresPage: React.FC = () => {
                       {prof.disciplinasMinistradas &&
                       prof.disciplinasMinistradas.length > 0
                         ? prof.disciplinasMinistradas
-                            .map((d) => d.nome)
-                            .join(", ")
+                            ?.map((d: { nome: string }) => d.nome)
+                            .join(", ") || ""
                         : "Nenhuma"}
                     </TableCell>
                     <TableCell align="center">
@@ -471,6 +471,7 @@ export const SecretarioProfessoresPage: React.FC = () => {
         open={openCreateModal}
         onClose={() => setOpenCreateModal(false)}
         onSave={handleCreateSave}
+        onSuccess={carregarProfessores}
       />
 
       <EditarProfessorModal

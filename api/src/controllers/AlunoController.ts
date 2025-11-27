@@ -26,7 +26,7 @@ export const getAllAlunos = async (
 };
 
 // =========================================================================
-// 2. createAluno (POST /)
+// 2. createAluno (POST /) - CORRIGIDO
 // =========================================================================
 export const createAluno = async (
   req: Request,
@@ -39,11 +39,21 @@ export const createAluno = async (
     const novoAluno = await alunoService.create(data);
     return res.status(201).json(novoAluno);
   } catch (error: any) {
-    console.error("Erro ao criar aluno:", error);
+    console.error("Erro ao criar aluno:", error); // 🚨 VERIFIQUE AQUI O LOG DETALHADO! // Trata erros de DUPLICIDADE (CPF/Email) lançados pelo Service
 
     if (error.message.includes("E-mail ou CPF já cadastrado")) {
-      return res.status(409).json({ message: error.message });
+      return res.status(409).json({ message: error.message }); // 409 Conflict
     }
+
+    // 🟢 NOVO: Trata erros de VALIDAÇÃO customizados (Turma/Casa inexistente, Data inválida)
+    if (
+      error.message.includes("não existe") ||
+      error.message.includes("inválida") ||
+      error.message.includes("obrigatório")
+    ) {
+      // Erro de entrada de dados do cliente (Bad Request)
+      return res.status(400).json({ message: error.message });
+    } // Trata erros conhecidos do Prisma (fallback)
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2000" || error.code === "P2002") {
@@ -52,14 +62,22 @@ export const createAluno = async (
             "Dados inválidos: Verifique se todos os campos obrigatórios foram preenchidos ou se há duplicidade (CPF/Email).",
         });
       }
-    }
+      // Trata erro de ID de relacionamento inexistente (ex: P2003 Foreign Key Constraint)
+      if (error.code === "P2003") {
+        return res
+          .status(404)
+          .json({
+            message:
+              "Relacionamento não encontrado (Turma ou Casa inexistente).",
+          });
+      }
+    } // Fallback: Erro inesperado do servidor
 
     return res
       .status(500)
       .json({ message: "Erro interno ao registrar aluno." });
   }
 };
-
 // =========================================================================
 // 3. getAlunoById (GET /:id)
 // =========================================================================

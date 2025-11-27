@@ -3,7 +3,6 @@ import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { CircularProgress, Box } from "@mui/material";
 
 import LoginPage from "../pages/LoginPage";
-import HomePage from "../pages/HomePage";
 import { AlunoPage } from "../pages/AlunoPage";
 import { ProfessorPage } from "../pages/ProfessorPage";
 import { SecretarioDashboard } from "../pages/SecretarioPage";

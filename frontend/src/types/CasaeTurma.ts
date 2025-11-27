@@ -4,8 +4,8 @@
 export interface Casa {
   id: number;
   nome: string;
-  diretor: string;
-  cor: string;
+  diretor?: string;
+  cor?: string;
 }
 
 export interface Curso {
@@ -18,7 +18,7 @@ export interface Turma {
   serie: string;
   ano: number;
   turno: "MATUTINO" | "VESPERTINO" | "NOTURNO";
-  curso: Curso;
+  curso?: Curso;
 }
 
 // =========================================================================

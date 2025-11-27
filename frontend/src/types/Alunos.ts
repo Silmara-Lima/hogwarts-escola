@@ -1,5 +1,4 @@
 import type { Casa, Turma } from "./CasaeTurma";
-import type { Disciplina } from "./Disciplina";
 
 // ----------------------------
 // NOVOS TIPOS DE RELAÇÃO API (Refletindo a resposta do Prisma)
@@ -21,6 +20,7 @@ export interface TurmaDisciplinaAPI {
 export interface DisciplinaAPI {
   id: number;
   nome: string;
+  professor: string;
   turmasDisciplinas: TurmaDisciplinaAPI[];
 }
 
@@ -47,7 +47,7 @@ export interface AlunoDetalheAPI {
   email: string;
   cpf: string;
   telefone?: string | null;
-  dataNascimento: string;
+  dataNascimento?: string;
   matricula: string;
   turno: string;
   turma: Turma;
@@ -67,7 +67,6 @@ export interface DisciplinaFrontEnd {
   id: number;
   nome: string;
   professor: string;
-  horario: string;
 }
 
 export interface AlunoDetalheFrontEnd {
@@ -76,9 +75,9 @@ export interface AlunoDetalheFrontEnd {
   email: string;
   cpf: string;
   telefone?: string | null;
-  dataNascimento: string;
+  dataNascimento?: string;
   matricula: string;
-  curso: string; // mapeado de turma.serie
+  curso?: string; // mapeado de turma.serie
   turno: Turma["turno"] | string;
   nomeCasa: string; // mapeado de casa.nome
 
@@ -95,13 +94,13 @@ export interface Aluno {
   id: number;
   nome: string;
   matricula: string;
-  dataNascimento: string;
+  dataNascimento?: string;
   cpf: string;
   email: string;
   telefone?: string | null;
   turno: Turma["turno"] | string;
-  casa: { Casa: string } | string | null;
-  turma: { Turma: string } | string;
+  casa?: { id: number; nome: string } | null;
+  turma?: { id: number; serie: string; turno: string } | null;
 }
 
 // ----------------------------
@@ -118,6 +117,7 @@ export type CreateAlunoData = {
   casaId?: number;
   turmaId: number;
   dataNascimento: string;
+  curso?: string;
 };
 
 export type UpdateAlunoData = Partial<Omit<CreateAlunoData, "senha">>;

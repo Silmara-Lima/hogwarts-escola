@@ -1,5 +1,6 @@
 // src/pages/ProfessorPage.tsx
-import React, { useState, useEffect } from "react";
+
+import { useState, useEffect } from "react";
 import {
   Container,
   Paper,
@@ -14,6 +15,7 @@ import {
   Button,
   useTheme,
 } from "@mui/material";
+
 import SchoolIcon from "@mui/icons-material/School";
 import ClassIcon from "@mui/icons-material/Class";
 import BookIcon from "@mui/icons-material/Book";
@@ -24,7 +26,7 @@ import { getMeDetails } from "../services/ProfessorService";
 import type { ProfessorDetalhe } from "../types/Professor";
 
 // =========================================================================
-// 1. Constantes de cores e estilos
+// 1. Constantes de estilo
 // =========================================================================
 const BG_PRINCIPAL = "#2B2A27";
 const CARD_BG = "#212121";
@@ -71,6 +73,7 @@ interface DetailItemProps {
   primaryColor: string;
   textColor?: string;
 }
+
 const DetailItem = ({
   label,
   value = "",
@@ -113,16 +116,18 @@ export const ProfessorPage = () => {
   const { user, loading: loadingAuth, signOut } = useAuth();
   const [professorDetalhe, setProfessorDetalhe] =
     useState<ProfessorDetalhe | null>(null);
+
   const [loadingData, setLoadingData] = useState(false);
   const theme = useTheme();
 
   useEffect(() => {
-    if (typeof document !== "undefined")
+    if (typeof document !== "undefined") {
       document.body.style.backgroundColor = BG_PRINCIPAL;
+    }
   }, []);
 
   // =========================================================================
-  // 5. Carrega dados do professor logado
+  // 5. Carregar dados do professor logado
   // =========================================================================
   useEffect(() => {
     if (loadingAuth || !user?.email) return;
@@ -130,7 +135,7 @@ export const ProfessorPage = () => {
     const loadData = async () => {
       setLoadingData(true);
       try {
-        const data = await getMeDetails(user.email);
+        const data = await getMeDetails();
         setProfessorDetalhe(data);
       } catch (err) {
         console.error("Erro ao carregar dados do professor:", err);
@@ -187,7 +192,6 @@ export const ProfessorPage = () => {
 
         <Typography
           variant="h3"
-          component="h1"
           sx={{
             color: ACCENT_DOURO,
             borderBottom: `5px solid ${ACCENT_DOURO}`,
@@ -195,10 +199,11 @@ export const ProfessorPage = () => {
             textAlign: "center",
           }}
         >
-          Seja Bem-vindo(a), {professorDetalhe?.nome || user?.nome || ""}
+          Seja Bem-vindo(a), {professorDetalhe?.nome ?? user?.nome ?? ""}
         </Typography>
 
         <Grid container spacing={4}>
+          {/* =========================  CARD ESQUERDO  ====================== */}
           <Grid item xs={12} md={5}>
             <Paper
               sx={{
@@ -217,37 +222,42 @@ export const ProfessorPage = () => {
                   alignItems: "center",
                 }}
               >
-                <SchoolIcon sx={{ mr: 2, color: ACCENT_DOURO_SUAVE }} /> Dados
-                do Professor
+                <SchoolIcon sx={{ mr: 2, color: ACCENT_DOURO_SUAVE }} />
+                Dados do Professor
               </Typography>
+
               <Box>
                 <DetailItem
                   label="Matrícula"
-                  value={professorDetalhe?.matricula}
+                  value={professorDetalhe?.matricula ?? ""}
                   icon={ClassIcon}
                   primaryColor={ACCENT_DOURO_SUAVE}
                 />
+
                 <DetailItem
                   label="Departamento"
-                  value={professorDetalhe?.departamento || "-"}
+                  value={professorDetalhe?.departamento ?? ""}
                   icon={ClassIcon}
                   primaryColor={ACCENT_DOURO_SUAVE}
                 />
+
                 <DetailItem
                   label="Email"
-                  value={professorDetalhe?.email}
+                  value={professorDetalhe?.email ?? ""}
                   icon={ClassIcon}
                   primaryColor={ACCENT_DOURO_SUAVE}
                 />
+
                 <DetailItem
                   label="CPF"
-                  value={professorDetalhe?.cpf}
+                  value={professorDetalhe?.cpf ?? ""}
                   icon={ClassIcon}
                   primaryColor={ACCENT_DOURO_SUAVE}
                 />
+
                 <DetailItem
                   label="Telefone"
-                  value={professorDetalhe?.telefone}
+                  value={professorDetalhe?.telefone ?? ""}
                   icon={ClassIcon}
                   primaryColor={ACCENT_DOURO_SUAVE}
                 />
@@ -255,6 +265,7 @@ export const ProfessorPage = () => {
             </Paper>
           </Grid>
 
+          {/* =========================  CARD DIREITO ======================== */}
           <Grid item xs={12} md={7}>
             <Paper
               sx={{
@@ -275,8 +286,9 @@ export const ProfessorPage = () => {
               >
                 <BookIcon sx={{ mr: 2, color: ACCENT_DOURO }} /> Disciplinas
                 Ministradas (
-                {professorDetalhe?.disciplinasMinistradas?.length || 0})
+                {professorDetalhe?.disciplinasMinistradas?.length ?? 0})
               </Typography>
+
               <List
                 sx={{
                   border: `1px solid ${ACCENT_DOURO}50`,
@@ -284,7 +296,7 @@ export const ProfessorPage = () => {
                   overflow: "hidden",
                 }}
               >
-                {(professorDetalhe?.disciplinasMinistradas || []).map(
+                {(professorDetalhe?.disciplinasMinistradas ?? []).map(
                   (d, i) => (
                     <ListItem
                       key={d.id}
@@ -298,6 +310,7 @@ export const ProfessorPage = () => {
                       <ListItemIcon sx={{ minWidth: 40 }}>
                         <BookIcon sx={{ color: ACCENT_DOURO }} />
                       </ListItemIcon>
+
                       <ListItemText
                         primary={
                           <span

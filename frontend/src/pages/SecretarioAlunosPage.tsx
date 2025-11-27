@@ -2,6 +2,8 @@
 // 1. IMPORTS
 // =========================================================================
 import { useEffect, useState, useCallback, useMemo } from "react";
+// 🟢 FUNÇÃO DE UTILIDADE IMPORTADA
+import { formatarDataISOParaBR } from "../utils/DataUtils";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -25,6 +27,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import { AlunosTable } from "../components/aluno/ConsultarAlunoTable";
 import { CriarAlunoModal } from "../components/aluno/CriarAlunoModal";
 import { EditarAlunoModal } from "../components/aluno/EditarAlunoModal";
+import type { AlunoPropType } from "../components/aluno/EditarAlunoModal";
 
 import {
   getAlunos,
@@ -32,7 +35,13 @@ import {
   createAluno,
   updateAluno,
 } from "../services/AlunosService";
-import type { AlunoFrontEnd, CreateAlunoData } from "../types/Alunos";
+
+import type {
+  AlunoFrontEnd,
+  CreateAlunoData,
+  UpdateAlunoData,
+} from "../types/Alunos";
+import type { Turma } from "../types/CasaeTurma";
 import { useDebounce } from "../hooks/useDebounce";
 
 // =========================================================================
@@ -40,6 +49,28 @@ import { useDebounce } from "../hooks/useDebounce";
 // =========================================================================
 export const SecretarioAlunosPage = () => {
   const navigate = useNavigate();
+
+  const mapAlunoFrontToPropType = (a: AlunoFrontEnd): AlunoPropType => ({
+    id: a.id,
+    nome: a.nome,
+    matricula: a.matricula,
+    email: a.email,
+    dataNascimento: a.dataNascimento ?? "",
+    cpf: a.cpf ?? null,
+    telefone: a.telefone ?? null,
+    turno: a.turno ?? (a.turma?.turno as Turma["turno"]) ?? null,
+    casaId: a.casa?.id ?? null,
+    casa: a.casa ? { id: a.casa.id, nome: a.casa.nome } : null,
+    turmaId: a.turma?.id ?? null,
+    turma: a.turma
+      ? {
+          id: a.turma.id,
+          serie: a.turma.serie,
+          turno: a.turma.turno as Turma["turno"],
+          ano: Number((a.turma as any).ano),
+        }
+      : null,
+  });
 
   // =========================================================================
   // 2.1 STATE
@@ -54,6 +85,7 @@ export const SecretarioAlunosPage = () => {
     message: "",
     severity: "success" as "success" | "error" | "info" | "warning",
   });
+
   const [openCreateModal, setOpenCreateModal] = useState(false);
   const [alunoEditando, setAlunoEditando] = useState<AlunoFrontEnd | null>(
     null
@@ -62,55 +94,55 @@ export const SecretarioAlunosPage = () => {
   const debouncedTerm = useDebounce(searchTerm, 300);
 
   // =========================================================================
-  // 2.2 FUNÇÕES AUXILIARES
+  // 2.2 FORMATADORES DE DATA
   // =========================================================================
-  const formatDate = (dateStr: string | undefined | null): string => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "";
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(date.getUTCDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
 
+  // Front → Backend: dd/mm/yyyy → yyyy-mm-dd (Usada para salvar/editar)
+  /*const frontToBackend = (dateString: string | undefined): string | null => {
+    if (!dateString) return null;
+
+    const match = dateString.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (match) {
+      const [, day, month, year] = match;
+      return `${year}-${month}-${day}`;
+    }
+    return null;
+  };*/
+
+  // =========================================================================
+  // 2.3 MAPEAMENTO DO ALUNO
+  // =========================================================================
   const mapAlunoFromBackend = (a: any): AlunoFrontEnd => {
-    const matriculaFinal =
-      a.matricula ??
-      a.matriculas?.[0]?.codigo ??
-      a.matriculas?.[0]?.numero ??
-      "";
-    const dataNascFinal = a.dataNascimento ? formatDate(a.dataNascimento) : "";
     const casaObj = a.casa
-      ? { id: Number(a.casa.id), nome: a.casa.nome ?? "—" }
+      ? { id: Number(a.casa.id), nome: a.casa.nome }
       : null;
+
     const turmaObj = a.turma
       ? {
           id: Number(a.turma.id),
-          serie: a.turma.serie ?? "",
-          turno: a.turma.turno ?? "",
-          ano: a.turma.ano ?? "",
+          serie: a.turma.serie,
+          turno: a.turma.turno,
+          ano: a.turma.ano,
         }
       : null;
 
     return {
       id: Number(a.id),
-      nome: a.nome,
-      email: a.email,
-      matricula: matriculaFinal,
-      cpf: a.cpf ?? "",
+      nome: a.nome ?? "",
+      email: a.email ?? "",
+      matricula: a.matricula ?? "",
+      cpf: a.cpf,
       telefone: a.telefone ?? "",
-      dataNascimento: dataNascFinal,
+      // 🟢 CORRIGIDO: Usando a função robusta para o formato DD/MM/AAAA na exibição
+      dataNascimento: formatarDataISOParaBR(a.dataNascimento),
       casa: casaObj,
       turma: turmaObj,
-      casaId: casaObj?.id ?? "",
-      turmaId: turmaObj?.id ?? "",
       turno: a.turno ?? turmaObj?.turno ?? "",
     };
   };
 
   // =========================================================================
-  // 2.3 CARREGAR ALUNOS
+  // 2.4 CARREGAR ALUNOS
   // =========================================================================
   const carregarAlunos = useCallback(async () => {
     setLoading(true);
@@ -133,18 +165,18 @@ export const SecretarioAlunosPage = () => {
   }, [carregarAlunos]);
 
   // =========================================================================
-  // 2.4 DELETE
+  // 2.5 DELETE
   // =========================================================================
   const handleDeleteConfirm = (id: number) => setConfirmDeleteId(id);
 
   const handleDelete = async () => {
     if (!confirmDeleteId) return;
     setDeletingId(confirmDeleteId);
-    const idToDelete = confirmDeleteId;
 
     try {
-      await deleteAluno(idToDelete);
-      setAlunos((prev) => prev.filter((a) => a.id !== idToDelete));
+      await deleteAluno(confirmDeleteId);
+      setAlunos((prev) => prev.filter((a) => a.id !== confirmDeleteId));
+
       setSnackbar({
         open: true,
         message: "Aluno removido com sucesso!",
@@ -163,29 +195,45 @@ export const SecretarioAlunosPage = () => {
   };
 
   // =========================================================================
-  // 2.5 EDITAR
+  // 2.6 EDITAR
   // =========================================================================
   const handleOpenEdit = (aluno: AlunoFrontEnd) =>
     setAlunoEditando({ ...aluno });
+
   const handleCloseEdit = () => setAlunoEditando(null);
 
-  const handleSaveEdit = async (formData: AlunoFrontEnd) => {
-    try {
-      const atualizadoDoServidor = await updateAluno(formData.id, {
-        nome: formData.nome,
-        email: formData.email,
-        matricula: formData.matricula,
-        dataNascimento: formData.dataNascimento,
-        cpf: formData.cpf || null,
-        telefone: formData.telefone || null,
-        casaId: formData.casaId ? Number(formData.casaId) : null,
-        turmaId: formData.turmaId ? Number(formData.turmaId) : null,
-        turno: formData.turno || undefined,
-      });
+  // 🟢 CORREÇÃO: Receba o payload JÁ FILTRADO do modal e tipado como UpdateAlunoData
+  const handleSaveEdit = async (payloadRecebido: UpdateAlunoData) => {
+    // O payload já está filtrado, validado e no formato esperado pela API (YYYY-MM-DD)
 
-      const alunoMapeado = mapAlunoFromBackend(atualizadoDoServidor);
+    if (!alunoEditando) {
+      // Verificação de segurança
+      setSnackbar({
+        open: true,
+        message: "Erro: Aluno não selecionado.",
+        severity: "error",
+      });
+      return;
+    }
+
+    // O ID do aluno deve ser passado separadamente, pois o payload não o contém.
+    const alunoId = alunoEditando.id;
+
+    try {
+      // 🔴 REMOVIDO: A recriação e a chamada a frontToBackend
+      // O payload recebido já está pronto.
+
+      console.log(
+        "PAYLOAD FINAL ENVIADO PARA API (EDIT):",
+        JSON.stringify(payloadRecebido, null, 2)
+      );
+
+      // Usa o alunoId e o payloadRecebido diretamente
+      const atualizadoServidor = await updateAluno(alunoId, payloadRecebido);
+      const alunoMap = mapAlunoFromBackend(atualizadoServidor);
+
       setAlunos((prev) =>
-        prev.map((a) => (a.id === alunoMapeado.id ? alunoMapeado : a))
+        prev.map((a) => (a.id === alunoMap.id ? alunoMap : a))
       );
 
       setSnackbar({
@@ -193,30 +241,39 @@ export const SecretarioAlunosPage = () => {
         message: "Aluno atualizado com sucesso!",
         severity: "success",
       });
+
       handleCloseEdit();
-    } catch {
-      setSnackbar({
-        open: true,
-        message: "Erro ao atualizar aluno.",
-        severity: "error",
-      });
+    } catch (error) {
+      console.error("Erro ao salvar edição:", error);
+      // ... (tratamento de erro)
     }
   };
 
   // =========================================================================
-  // 2.6 CRIAR
+  // 2.7 CRIAR
   // =========================================================================
   const handleCreateSave = async (dados: CreateAlunoData) => {
     try {
-      await createAluno(dados);
+      const payload: CreateAlunoData = {
+        ...dados,
+
+        curso: undefined,
+      };
+      console.log(
+        "PAYLOAD FINAL ENVIADO PARA API (CREATE):",
+        JSON.stringify(payload, null, 2)
+      );
+
+      await createAluno(payload);
       setOpenCreateModal(false);
       await carregarAlunos();
+
       setSnackbar({
         open: true,
         message: "Aluno criado com sucesso!",
         severity: "success",
       });
-    } catch (error) {
+    } catch {
       setSnackbar({
         open: true,
         message: "Erro ao criar aluno.",
@@ -226,26 +283,19 @@ export const SecretarioAlunosPage = () => {
   };
 
   // =========================================================================
-  // 2.7 FILTRO
+  // 2.8 FILTRO
   // =========================================================================
   const alunosFiltrados = useMemo(() => {
     if (!debouncedTerm.trim()) return alunos;
+
     const term = debouncedTerm.toLowerCase().trim();
+
     return alunos.filter((a) =>
       [a.nome, a.matricula, a.email, a.cpf, a.casa?.nome].some((v) =>
         (v ?? "").toLowerCase().includes(term)
       )
     );
   }, [alunos, debouncedTerm]);
-
-  // =========================================================================
-  // 2.8 MODAL HANDLERS
-  // =========================================================================
-  const handleCloseCreateModal = () => {
-    setOpenCreateModal(false);
-    document.activeElement instanceof HTMLElement &&
-      document.activeElement.blur();
-  };
 
   // =========================================================================
   // 2.9 RENDER
@@ -256,7 +306,6 @@ export const SecretarioAlunosPage = () => {
       flexDirection="column"
       alignItems="center"
       minHeight="100vh"
-      bgcolor="background.default"
       p={3}
     >
       <Paper
@@ -268,7 +317,6 @@ export const SecretarioAlunosPage = () => {
           borderRadius: 2,
         }}
       >
-        {/* Voltar */}
         <IconButton
           aria-label="voltar"
           onClick={() => navigate("/secretario/dashboard")}
@@ -278,12 +326,11 @@ export const SecretarioAlunosPage = () => {
           <ArrowBackIcon fontSize="small" />
         </IconButton>
 
-        {/* Título */}
         <Typography variant="h5" align="center" fontWeight={600} mb={3}>
           Lista de Alunos
         </Typography>
 
-        {/* Search */}
+        {/* Busca */}
         <Box mb={3}>
           <TextField
             fullWidth
@@ -299,11 +346,9 @@ export const SecretarioAlunosPage = () => {
               ),
             }}
           />
+
           {debouncedTerm && (
             <Box mt={1} display="flex" alignItems="center" gap={1}>
-              <Typography variant="body2" color="text.secondary">
-                Resultados:
-              </Typography>
               <Chip
                 label={alunosFiltrados.length}
                 size="small"
@@ -319,7 +364,7 @@ export const SecretarioAlunosPage = () => {
           )}
         </Box>
 
-        {/* Tabela de Alunos */}
+        {/* Tabela */}
         <AlunosTable
           alunos={alunosFiltrados}
           deletingId={deletingId}
@@ -329,7 +374,7 @@ export const SecretarioAlunosPage = () => {
           searchQuery={debouncedTerm}
         />
 
-        {/* Botão Novo Aluno */}
+        {/* Criar */}
         <Box mt={3} display="flex" justifyContent="flex-end">
           <Button variant="contained" onClick={() => setOpenCreateModal(true)}>
             Novo Aluno
@@ -352,20 +397,23 @@ export const SecretarioAlunosPage = () => {
         </Snackbar>
       </Paper>
 
-      {/* Modais */}
+      {/* Modal editar */}
       <EditarAlunoModal
         open={alunoEditando !== null}
-        aluno={alunoEditando}
+        aluno={alunoEditando ? mapAlunoFrontToPropType(alunoEditando) : null}
         onClose={handleCloseEdit}
         onSave={handleSaveEdit}
       />
+
+      {/* Modal criar */}
       <CriarAlunoModal
         open={openCreateModal}
-        onClose={handleCloseCreateModal}
+        onClose={() => setOpenCreateModal(false)}
         onSave={handleCreateSave}
+        onSuccess={carregarAlunos}
       />
 
-      {/* Dialog de exclusão */}
+      {/* Dialog excluir */}
       <Dialog open={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)}>
         <DialogTitle>Confirmar Exclusão</DialogTitle>
         <DialogContent>

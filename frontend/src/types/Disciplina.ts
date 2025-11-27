@@ -4,8 +4,8 @@
 export interface Disciplina {
   id: number;
   nome: string;
-  cargaHoraria: number;
-  eObrigatoria: boolean;
+  cargaHoraria?: number;
+  eObrigatoria?: boolean;
 }
 
 export interface DisciplinaMinistrada {

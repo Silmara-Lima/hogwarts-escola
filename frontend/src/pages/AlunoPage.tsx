@@ -17,7 +17,6 @@ import {
   useTheme,
   Button,
 } from "@mui/material";
-import SchoolIcon from "@mui/icons-material/School";
 import ClassIcon from "@mui/icons-material/Class";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import BookIcon from "@mui/icons-material/Book";
@@ -345,7 +344,6 @@ export const AlunoPage = () => {
                       secondary={
                         <span style={{ color: ACCENT_DOURO_SUAVE }}>
                           Mestre(a): {d.professor} | Horário de Poções:{" "}
-                          {d.horario}
                         </span>
                       }
                     />

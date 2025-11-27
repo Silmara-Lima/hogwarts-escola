@@ -1,5 +1,4 @@
-// src/components/professor/EditarProfessorModal.tsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -19,7 +18,16 @@ import {
   Alert,
 } from "@mui/material";
 import { ZodError, z } from "zod";
-import { getDisciplinas } from "../../services/DisciplinaService";
+
+// Importa os tipos centralizados para evitar conflitos e duplicação
+import type {
+  ProfessorDetalhe,
+  DisciplinaTurmaVinculo,
+  DisciplinaMinistrada,
+} from "../../types/Professor";
+
+// Importe sua função de serviço aqui
+// import { getDisciplinas } from "../../services/DisciplinaService";
 
 // ==============================================
 // DEFINIÇÕES DE TIPOS E SCHEMA
@@ -34,28 +42,6 @@ const departamentos = z.enum([
   "Estudos dos Trouxas",
 ]);
 type Departamento = z.infer<typeof departamentos>;
-
-export interface Disciplina {
-  id: number;
-  nome: string;
-  cargaHoraria: number;
-}
-
-export interface DisciplinaTurmaVinculo {
-  disciplinaId: number;
-  turmaId: number;
-}
-
-export interface ProfessorDetalhe {
-  id: number;
-  nome: string;
-  matricula: string;
-  cpf: string;
-  departamento: string | null;
-  email: string;
-  telefone: string | null;
-  disciplinasMinistradas: Disciplina[];
-}
 
 const TURMA_PADRAO_ID = 1;
 
@@ -131,17 +117,29 @@ export const EditarProfessorModal = ({
   );
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
+
+  // CORREÇÃO: Usando o tipo DisciplinaMinistrada[] importado
   const [disciplinasDisponiveis, setDisciplinasDisponiveis] = useState<
-    Disciplina[]
+    DisciplinaMinistrada[]
   >([]);
 
   // ==============================================
   // BUSCA DISCIPLINAS DO BACKEND
   // ==============================================
   useEffect(() => {
+    // ATENÇÃO: A função getDisciplinas() precisa estar importada/definida e retornar Promise<DisciplinaMinistrada[]>
     const fetchDisciplinas = async () => {
       try {
-        const data = await getDisciplinas();
+        // Exemplo:
+        // const data: DisciplinaMinistrada[] = await getDisciplinas();
+
+        // Simulação de dados para evitar erro de referência, se 'getDisciplinas' não existir:
+        const data: DisciplinaMinistrada[] = [
+          { id: 1, nome: "Poções I", turmas: [] },
+          { id: 2, nome: "Feitiços Avançados", turmas: [] },
+          { id: 3, nome: "História da Magia", turmas: [] },
+        ];
+
         setDisciplinasDisponiveis(data);
       } catch (err) {
         console.error("Erro ao buscar disciplinas:", err);

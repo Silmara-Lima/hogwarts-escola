@@ -31,6 +31,13 @@ app.use(express.json());
 // 2. Rotas e Documentação
 // =========================================================================
 
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "Online e Mágico! 🧙‍♂️",
+    documentation: `http://localhost:${PORT}/api-docs`,
+  });
+});
+
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api", routes);
 

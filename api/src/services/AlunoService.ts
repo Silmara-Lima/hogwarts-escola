@@ -6,15 +6,18 @@ import * as bcrypt from "bcryptjs";
 // TIPOS
 // =========================================================================
 
+// Entrada para criação (omite campos gerados e a dataNascimento, que é tratada como string/Date)
 export type AlunoCreateData = Omit<
   Aluno,
   "id" | "createdAt" | "updatedAt" | "dataNascimento"
 > & {
-  dataNascimento?: string | Date;
+  dataNascimento: string | Date; // Permitindo a string DD/MM/AAAA ou YYYY-MM-DD
 };
 
+// Entrada para atualização (todos os campos opcionais)
 export type AlunoUpdateData = Partial<AlunoCreateData>;
 
+// Payload de seleção de campos para retorno (inclui relações)
 export const alunoSelectPayload = Prisma.validator<Prisma.AlunoSelect>()({
   id: true,
   nome: true,
@@ -48,6 +51,9 @@ export const create = async (
     if (!turmaExists) {
       throw new Error(`Turma com id ${data.turmaId} não existe.`);
     }
+  } else {
+    // Turma é obrigatória, se o campo for removido do Omit, deve-se verificar
+    throw new Error("O campo turmaId é obrigatório.");
   }
 
   if (data.casaId !== null && data.casaId !== undefined) {
@@ -62,6 +68,7 @@ export const create = async (
   });
   if (existing) throw new Error("E-mail ou CPF já cadastrado no sistema.");
 
+  if (!data.senha) throw new Error("A senha é obrigatória.");
   const hashedPassword = await bcrypt.hash(data.senha, 10);
 
   let dataNascimentoIso: Date | undefined;
@@ -70,6 +77,10 @@ export const create = async (
 
     if (dataNascimentoStr.includes("/")) {
       const [day, month, year] = dataNascimentoStr.split("/").map(Number);
+      // CORREÇÃO CRÍTICA APLICADA: Criação do objeto Date
+      dataNascimentoIso = new Date(year, month - 1, day);
+      if (isNaN(dataNascimentoIso.getTime()))
+        throw new Error("Data de nascimento inválida");
     } else if (dataNascimentoStr.includes("-")) {
       const d = new Date(data.dataNascimento);
       if (isNaN(d.getTime())) throw new Error("Data de nascimento inválida");
@@ -77,15 +88,21 @@ export const create = async (
     } else {
       throw new Error("Data de nascimento inválida");
     }
+  } else {
+    throw new Error("Data de nascimento é obrigatória.");
   }
 
   const { casaId, turmaId, ...rest } = data;
-  const createData: any = {
+
+  // 🟢 AJUSTE DE TIPAGEM: Usamos Prisma.AlunoCreateInput
+  const createData: Prisma.AlunoCreateInput = {
     ...rest,
+    // 💡 Usa o non-null assertion `!` pois verificamos que o campo é obrigatório
     senha: hashedPassword,
-    dataNascimento: dataNascimentoIso,
-    turma: { connect: { id: turmaId } },
-  };
+    dataNascimento: dataNascimentoIso!,
+    // Garante que o ID não vá direto para o Prisma (causando o 500), mas sim a relação
+    turma: { connect: { id: turmaId! } },
+  }; // Conexão opcional para Casa
 
   if (casaId) createData.casa = { connect: { id: casaId } };
 
@@ -128,11 +145,11 @@ export const update = async (
   if (!alunoAtual) throw new Error(`Aluno com id ${id} não encontrado.`);
 
   const { casaId, turmaId, dataNascimento, ...rest } = data;
-  const updateData: any = { ...rest };
+  const updateData: Prisma.AlunoUpdateInput = { ...rest }; // Atualização de Turma
 
   if (turmaId && turmaId !== alunoAtual.turmaId) {
     updateData.turma = { connect: { id: turmaId } };
-  }
+  } // Atualização/Desconexão de Casa
 
   if (casaId !== undefined && casaId !== alunoAtual.casaId) {
     updateData.casa =

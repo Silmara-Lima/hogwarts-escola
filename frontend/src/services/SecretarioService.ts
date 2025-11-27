@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Professor, ProfessorCreateData } from "../types/Professor";
+import type { ProfessorDetalhe, ProfessorCreateData } from "../types/Professor";
 import type { Aluno, CreateAlunoData } from "../types/Alunos";
 
 // ======================================================
@@ -65,8 +65,8 @@ export const createAlunoBySecretario = async (
 
 export const createProfessorBySecretario = async (
   data: ProfessorCreateData
-): Promise<Professor> => {
-  const response = await api.post<Professor>(
+): Promise<ProfessorDetalhe> => {
+  const response = await api.post<ProfessorDetalhe>(
     `${ENDPOINT_ADM}/professores`,
     data
   );

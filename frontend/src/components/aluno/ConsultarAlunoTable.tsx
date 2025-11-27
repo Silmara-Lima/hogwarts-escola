@@ -42,10 +42,14 @@ const normalizarAluno = (raw: any): Aluno => {
       "N/A",
     email: origem.email ?? "",
     turno: origem.turno ?? "N/A",
-    casa: origem.casa
-      ? { id: origem.casa.id ?? "", nome: origem.casa.nome ?? "N/A" }
+    casa: origem.casa ? { id: origem.casa.id, nome: origem.casa.nome } : null,
+    turma: origem.turma
+      ? {
+          id: origem.turma.id,
+          serie: origem.turma.serie,
+          turno: origem.turma.turno,
+        }
       : null,
-    turma: origem.turma ? { nome: origem.turma.serie || origem.turma } : null,
   };
 };
 
@@ -151,7 +155,9 @@ export const AlunosTable = ({
                 </TableCell>
 
                 <TableCell align="center" className="whitespace-nowrap">
-                  {formatarDataCorreta(aluno.dataNascimento)}
+                  {aluno.dataNascimento
+                    ? formatarDataCorreta(aluno.dataNascimento)
+                    : "-"}
                 </TableCell>
 
                 <TableCell align="center" className="text-sm max-w-xs truncate">

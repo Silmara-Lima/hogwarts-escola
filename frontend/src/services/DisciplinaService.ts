@@ -6,12 +6,12 @@ import api from "./api";
 export interface Disciplina {
   id: number;
   nome: string;
-  cargaHoraria: number; // Horas por semana
+  cargaHoraria?: number; // Horas por semana
 }
 
 export interface CreateDisciplinaDTO {
   nome: string;
-  cargaHoraria: number;
+  cargaHoraria?: number;
 }
 
 export interface UpdateDisciplinaDTO {
