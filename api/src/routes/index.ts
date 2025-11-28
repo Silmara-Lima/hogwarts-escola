@@ -4,7 +4,6 @@
 
 import { Router } from "express";
 
-// Importações dos módulos de rotas
 import authRoutes from "./authRoutes";
 import optionRoutes from "./optionRoutes";
 import professorRoutes from "./professorRoutes";
@@ -14,29 +13,38 @@ import disciplinaRoutes from "./disciplinaRoutes";
 import matriculaRoutes from "./matriculaRoutes";
 import casaRoutes from "./casaRoutes";
 
-// Importações adicionais para rota de perfil do Aluno
 import * as AlunoController from "../controllers/AlunoController";
 import { authenticate, authorize } from "../middlewares/authMiddleware";
 
 const router = Router();
 
 // =========================================================================
-// ROTAS DA API
+// ROTAS PÚBLICAS
 // =========================================================================
 
-// 1. Rota de Autenticação (pública)
-// Endpoint: /api/auth/...
+// /api/auth/...
 router.use("/auth", authRoutes);
 
-// 2. Rotas do módulo de Pessoas e Gestão
-// Endpoint: /api/secretario/... (alunos, professores, dashboard)
+// =========================================================================
+// ROTAS DE GESTÃO (SECRETARIO)
+// =========================================================================
+
+// /api/secretario/alunos
+// /api/secretario/professores (CREATE)
+// /api/secretario/dashboard
 router.use("/secretario", secretarioRoutes);
 
-// Endpoint: /api/professores/... (CRUD de Professores)
+// =========================================================================
+// ROTAS DE PROFESSOR (CRUD + específicas)
+// =========================================================================
+
+// /api/professores/...
 router.use("/professores", professorRoutes);
 
-// Rota específica para obter informações do Aluno logado
-// Endpoint: /api/aluno/info
+// =========================================================================
+// ROTAS DO ALUNO LOGADO
+// =========================================================================
+
 router.get(
   "/aluno/info",
   authenticate,
@@ -44,14 +52,19 @@ router.get(
   AlunoController.getAlunoInfo
 );
 
-// 3. Rotas do módulo acadêmico e institucional
-router.use("/turmas", turmaRoutes); // /api/turmas/...
-router.use("/disciplinas", disciplinaRoutes); // /api/disciplinas/...
-router.use("/matriculas", matriculaRoutes); // /api/matriculas/...
-router.use("/casas", casaRoutes); // /api/casas/...
+// =========================================================================
+// ROTAS ACADÊMICAS
+// =========================================================================
 
-// 4. Rotas de utilitário/metadados
-// Endpoint: /api/options/...
+router.use("/turmas", turmaRoutes);
+router.use("/disciplinas", disciplinaRoutes);
+router.use("/matriculas", matriculaRoutes);
+router.use("/casas", casaRoutes);
+
+// =========================================================================
+// ROTAS DE OPÇÕES (Selects, dropdowns, metadados)
+// =========================================================================
+
 router.use("/options", optionRoutes);
 
 export default router;

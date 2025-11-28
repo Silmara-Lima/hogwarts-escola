@@ -4,17 +4,17 @@ import {
   authorize,
   UserRole,
 } from "../middlewares/authMiddleware";
+
 import * as secretarioController from "../controllers/SecretarioController";
 import alunoRoutes from "./alunoRoutes";
 
 const router = Router();
 
-// =========================================================================
-// ROTAS DO SECRETÁRIO
-// =========================================================================
 const SECRETARIO: UserRole[] = ["SECRETARIO"];
 
-// Dashboard
+// =========================================================================
+// 1. Dashboard do Secretário
+// =========================================================================
 router.get(
   "/dashboard",
   authenticate,
@@ -22,15 +22,14 @@ router.get(
   secretarioController.getDashboardStats
 );
 
-// Alunos
-router.use("/alunos", alunoRoutes);
+// =========================================================================
+// 2. CRUD de alunos (usa alunoRoutes)
+// =========================================================================
+router.use("/alunos", authenticate, authorize(SECRETARIO), alunoRoutes);
 
-// Professores
-router.post(
-  "/professores",
-  authenticate,
-  authorize(SECRETARIO),
-  secretarioController.createProfessor
-);
+// =========================================================================
+// 3. Professores NÃO FICAM AQUI
+// Pois todas as rotas de professor já estão em /api/professores
+// =========================================================================
 
 export default router;
