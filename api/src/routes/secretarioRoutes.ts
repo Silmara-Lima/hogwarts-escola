@@ -25,7 +25,7 @@ router.get(
 // =========================================================================
 // 2. CRUD de alunos (usa alunoRoutes)
 // =========================================================================
-router.use("/alunos", authenticate, authorize(SECRETARIO), alunoRoutes);
+router.use("/alunos", alunoRoutes);
 
 // =========================================================================
 // 3. Professores NÃO FICAM AQUI
