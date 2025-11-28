@@ -42,7 +42,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-app.use("/api", routes);
+app.use("/", routes);
 
 // =========================================================================
 // 3. Inicialização do Servidor
