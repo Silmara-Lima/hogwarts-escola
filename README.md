@@ -12,7 +12,7 @@ Sistema para gerenciamento da escola Hogwarts, incluindo alunos, professores, ca
 
 ## 📋 Visão Geral
 
-O **Sistema de Hogwarts** é uma aplicação full-stack que permite:
+O **Sistema de Hogwarts** é uma aplicação fullstack que permite:
 
 - ✅ Gerenciar secretários e controle de acesso
 - ✅ Cadastro e gestão de professores e alunos
