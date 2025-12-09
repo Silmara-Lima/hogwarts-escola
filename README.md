@@ -216,4 +216,4 @@ MIT License
 **Silmara Lima**
 
 - GitHub: [@silmara](https://github.com/Silmara-Lima)
-- Email: [silmara@example.com](mailto:silmara.pereiraspl@gmail.com)
+- Email: [silmara.pereiraspl@gmail.com](mailto:silmara.pereiraspl@gmail.com)
