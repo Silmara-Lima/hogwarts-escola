@@ -121,7 +121,7 @@ npx prisma migrate dev
 **Variáveis de ambiente** (`.env`):
 
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5434/hogwarts"
+DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/hogwarts"
 PORT=3000
 ```
 
